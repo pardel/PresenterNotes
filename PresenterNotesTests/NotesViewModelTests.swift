@@ -8,6 +8,13 @@ import XCTest
 
 final class NotesViewModelTests: XCTestCase {
 
+    override func setUp() {
+        super.setUp()
+        // NotesViewModel.init reads the last-used mode from UserDefaults,
+        // so prior test runs can leak state. Clear before each test.
+        UserDefaults.standard.removeObject(forKey: "PresenterNotes.mode")
+    }
+
     // MARK: - loadMarkdown / loadSample / newDocument
 
     func test_loadSample_populatesSlidesAndClearsDirty() {

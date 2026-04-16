@@ -160,7 +160,9 @@ final class NotesValidatorTests: XCTestCase {
         let fix = try XCTUnwrap(h1Issue.fix)
         let fixed = fix(source)
         XCTAssertTrue(fixed.contains("## BadH1"))
-        XCTAssertFalse(fixed.contains("# BadH1"))
+        // Use newline anchors so we don't spuriously match "# BadH1" as a
+        // substring of "## BadH1".
+        XCTAssertFalse(fixed.contains("\n# BadH1\n"))
         // Original "## Good" should still be untouched.
         XCTAssertTrue(fixed.contains("## Good"))
     }
