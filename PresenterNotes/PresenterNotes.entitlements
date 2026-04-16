@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<key>com.apple.security.device.audio-input</key>
+	<true/>
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
+	<!--
+	    Speech recognition has to be allowed to reach Apple's servers the
+	    first time a locale is downloaded for on-device use, and some of
+	    the audio stack still phones home to `audioanalyticsd` even when
+	    recognition itself is fully on-device.
+	-->
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<key>com.apple.security.print</key>
+	<true/>
+	<!--
+	    Core Audio's IO thread talks to `audioanalyticsd` via a mach
+	    service. Without this exception the sandbox kills the audio IO
+	    thread with `PRECONDITION FAILURE: ... doesn't contain
+	    'com.apple.audioanalyticsd'` the moment we install a tap on the
+	    microphone input node, which surfaces in Xcode as a null-pointer
+	    crash on `com.apple.audio.IOThread.client` and `-10877` from
+	    Core Audio. Allow-listing the global name fixes it.
+
+	    We set both key variants:
+	      - `temporary-exception.mach-lookup.global-name` is the legacy
+	        name honoured by older macOS releases.
+	      - `exception.mach-lookup.global-name` is the form newer macOS
+	        releases (macOS 15+ / Xcode 17) check against; the temporary
+	        form is no longer read. The precondition failure referenced
+	        this exact key name.
+	-->
+	<key>com.apple.security.temporary-exception.mach-lookup.global-name</key>
+	<array>
+		<string>com.apple.audioanalyticsd</string>
+	</array>
+	<key>com.apple.security.exception.mach-lookup.global-name</key>
+	<array>
+		<string>com.apple.audioanalyticsd</string>
+	</array>
+</dict>
+</plist>
