@@ -399,10 +399,9 @@ struct EditorPane: View {
         var currentSlide = -1
 
         for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if trimmed.hasPrefix("## ") && !trimmed.hasPrefix("### ") {
+            if NotesDocument.h2Title(in: line) != nil {
                 currentSlide += 1
-            } else if currentSlide < 0 && !trimmed.isEmpty {
+            } else if currentSlide < 0 && !line.trimmingCharacters(in: .whitespaces).isEmpty {
                 currentSlide = 0
             }
             if currentSlide == slideId { return charPos }
@@ -416,10 +415,9 @@ struct EditorPane: View {
         var charPos = 0
         var slideIdx = -1
         for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if trimmed.hasPrefix("## ") && !trimmed.hasPrefix("### ") {
+            if NotesDocument.h2Title(in: line) != nil {
                 slideIdx += 1
-            } else if slideIdx < 0 && !trimmed.isEmpty {
+            } else if slideIdx < 0 && !line.trimmingCharacters(in: .whitespaces).isEmpty {
                 slideIdx = 0
             }
             charPos += line.count + 1

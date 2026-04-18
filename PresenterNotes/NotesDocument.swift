@@ -74,7 +74,7 @@ enum NotesDocument {
         }
 
         for line in lines {
-            if let heading = Self.parseH2(line) {
+            if let heading = Self.h2Title(in: line) {
                 flush()
                 currentTitle = heading
                 currentBody = []
@@ -87,18 +87,21 @@ enum NotesDocument {
         return slides
     }
 
-    /// Return the heading text if `line` is an H2 heading, otherwise nil.
-    /// Matches `## Title` but not `### Sub` and not `#Title`.
-    private static func parseH2(_ line: String) -> String? {
+    /// Single source of truth for "is this line an H2 heading, and if so
+    /// what's the cleaned title?". Used by the parser, the validator,
+    /// and the editor's slide-index math. Callers that only need a bool
+    /// check write `h2Title(in: line) != nil`.
+    ///
+    /// Matches `## Title` but not `### Sub` (H3+) and not `#Title`
+    /// (no space). The returned title is whitespace-trimmed and has any
+    /// trailing `##` decoration stripped — so `"## Hello ##"` returns
+    /// `"Hello"` and `"## "` returns `""` (distinct from nil, so the
+    /// empty-title validation rule can still fire).
+    static func h2Title(in line: String) -> String? {
         let trimmed = line.trimmingCharacters(in: .whitespaces)
         guard trimmed.hasPrefix("## ") else { return nil }
-        // Exclude H3+ (which also "hasPrefix" "## " if we're not careful;
-        // we aren't, because "### " starts with "##" not "## ").
-        // Strip the "## " and any trailing "##" decorations.
         var title = String(trimmed.dropFirst(3))
-        while title.hasSuffix("#") {
-            title = String(title.dropLast())
-        }
+        while title.hasSuffix("#") { title = String(title.dropLast()) }
         return title.trimmingCharacters(in: .whitespaces)
     }
 
