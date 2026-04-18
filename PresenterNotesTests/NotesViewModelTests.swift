@@ -269,4 +269,102 @@ final class NotesViewModelTests: XCTestCase {
         vm.sourceText = "## Title\n\nalpha beta gamma delta\n"
         XCTAssertEqual(vm.spokenWordCount, 0)
     }
+
+    // MARK: - Undo / redo
+
+    func test_undo_freshViewModel_cannotUndoOrRedo() {
+        let vm = NotesViewModel()
+        XCTAssertFalse(vm.canUndo)
+        XCTAssertFalse(vm.canRedo)
+    }
+
+    func test_undo_afterEdit_restoresPreviousSource() {
+        let vm = NotesViewModel()
+        vm.loadMarkdown("## Start\n\nInitial.\n")
+        let initial = vm.sourceText
+        vm.sourceText = "## Edited\n\nChanged.\n"
+        XCTAssertTrue(vm.canUndo)
+        vm.undo()
+        XCTAssertEqual(vm.sourceText, initial)
+        XCTAssertTrue(vm.canRedo)
+    }
+
+    func test_redo_afterUndo_replaysEdit() {
+        let vm = NotesViewModel()
+        vm.loadMarkdown("## A\n\nOne.\n")
+        vm.sourceText = "## B\n\nTwo.\n"
+        let edited = vm.sourceText
+        vm.undo()
+        vm.redo()
+        XCTAssertEqual(vm.sourceText, edited)
+        XCTAssertFalse(vm.canRedo)
+    }
+
+    func test_newEditAfterUndo_clearsRedoStack() {
+        let vm = NotesViewModel()
+        vm.loadMarkdown("## A\n\nOne.\n")
+        vm.sourceText = "## B\n\nTwo.\n"
+        vm.undo()
+        XCTAssertTrue(vm.canRedo)
+        // A fresh edit should discard the redo path; you can't redo
+        // back into a branch you've just diverged from.
+        vm.sourceText = "## C\n\nThree.\n"
+        XCTAssertFalse(vm.canRedo)
+    }
+
+    func test_rapidEdits_coalesceIntoSingleUndoStep() {
+        // Tests running synchronously hit the coalesce window (0.6s)
+        // easily, so a burst of edits only pushes the first pre-edit
+        // state. One undo therefore rolls back the entire burst.
+        let vm = NotesViewModel()
+        vm.loadMarkdown("## T\n\nBody.\n")
+        let initial = vm.sourceText
+        vm.sourceText = initial + "a"
+        vm.sourceText = initial + "ab"
+        vm.sourceText = initial + "abc"
+        vm.undo()
+        XCTAssertEqual(vm.sourceText, initial)
+    }
+
+    func test_undo_onEmptyStack_isNoOp() {
+        let vm = NotesViewModel()
+        vm.loadMarkdown("## T\n\nBody.\n")
+        let initial = vm.sourceText
+        XCTAssertFalse(vm.canUndo)
+        vm.undo()  // should not throw or mutate
+        XCTAssertEqual(vm.sourceText, initial)
+    }
+
+    func test_redo_onEmptyStack_isNoOp() {
+        let vm = NotesViewModel()
+        vm.loadMarkdown("## T\n\nBody.\n")
+        let initial = vm.sourceText
+        XCTAssertFalse(vm.canRedo)
+        vm.redo()
+        XCTAssertEqual(vm.sourceText, initial)
+    }
+
+    func test_loadMarkdown_clearsUndoHistory() {
+        let vm = NotesViewModel()
+        vm.loadMarkdown("## A\n\nOne.\n")
+        vm.sourceText = "## A\n\nEdited.\n"
+        XCTAssertTrue(vm.canUndo)
+        // Loading a new document is a fresh start — no history from
+        // the previous document should survive.
+        vm.loadMarkdown("## B\n\nOther.\n")
+        XCTAssertFalse(vm.canUndo)
+        XCTAssertFalse(vm.canRedo)
+    }
+
+    func test_undoRedo_doesNotRecurseIntoItself() {
+        // Ensures the `isApplyingUndoRedo` guard works: an undo should
+        // not itself push another undo entry, otherwise undo/redo
+        // would ping-pong forever instead of converging.
+        let vm = NotesViewModel()
+        vm.loadMarkdown("## A\n\nOne.\n")
+        vm.sourceText = "## B\n\nTwo.\n"
+        vm.undo()
+        vm.undo()  // second undo with an empty stack
+        XCTAssertFalse(vm.canUndo)
+    }
 }
