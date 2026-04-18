@@ -326,10 +326,22 @@ struct ModeBar: View {
         .animation(.easeInOut(duration: 0.25), value: viewModel.mode)
     }
 
+    /// Progress for the top-bar fill. In `.slide` style the whole slide is
+    /// on screen at once, so progress is slide-based. In `.focusedSlide` /
+    /// `.teleprompter` the navigation unit is the paragraph, so progress
+    /// should advance paragraph-by-paragraph.
     private var progressFraction: CGFloat {
-        let total = viewModel.slides.count
+        let index: Int
+        let total: Int
+        if viewModel.presentStyle.usesParagraphs {
+            index = viewModel.currentParagraphIndex
+            total = viewModel.paragraphs.count
+        } else {
+            index = viewModel.currentIndex
+            total = viewModel.slides.count
+        }
         guard total > 0 else { return 0 }
-        return CGFloat(viewModel.currentIndex + 1) / CGFloat(total)
+        return CGFloat(index + 1) / CGFloat(total)
     }
 }
 
