@@ -22,6 +22,7 @@
 		AA0000000000000000000073 /* SpeechControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000063 /* SpeechControllerTests.swift */; };
 		AA0000000000000000000074 /* AppModeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000064 /* AppModeTests.swift */; };
 		AA0000000000000000000075 /* EditorPaneMathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000065 /* EditorPaneMathTests.swift */; };
+		AA0000000000000000000076 /* FontSizeMathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000066 /* FontSizeMathTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -53,6 +54,7 @@
 		AA0000000000000000000063 /* SpeechControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechControllerTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000064 /* AppModeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModeTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000065 /* EditorPaneMathTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorPaneMathTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000066 /* FontSizeMathTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FontSizeMathTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000080 /* PresenterNotesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PresenterNotesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -119,6 +121,7 @@
 				AA0000000000000000000063 /* SpeechControllerTests.swift */,
 				AA0000000000000000000064 /* AppModeTests.swift */,
 				AA0000000000000000000065 /* EditorPaneMathTests.swift */,
+				AA0000000000000000000066 /* FontSizeMathTests.swift */,
 			);
 			path = PresenterNotesTests;
 			sourceTree = "<group>";
@@ -235,6 +238,7 @@
 				AA0000000000000000000073 /* SpeechControllerTests.swift in Sources */,
 				AA0000000000000000000074 /* AppModeTests.swift in Sources */,
 				AA0000000000000000000075 /* EditorPaneMathTests.swift in Sources */,
+				AA0000000000000000000076 /* FontSizeMathTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
