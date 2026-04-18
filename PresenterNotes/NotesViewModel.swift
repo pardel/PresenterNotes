@@ -56,7 +56,7 @@ final class NotesViewModel: ObservableObject {
 
     @Published var mode: AppMode = .present {
         didSet {
-            UserDefaults.standard.set(mode.rawValue, forKey: "PresenterNotes.mode")
+            UserDefaults.standard.set(mode.rawValue, forKey: Self.modeDefaultsKey)
             if mode == .present, isDirty, sourceURL != nil {
                 try? save()
             }
@@ -66,7 +66,7 @@ final class NotesViewModel: ObservableObject {
 
     @Published var presentStyle: PresentStyle = .slide {
         didSet {
-            UserDefaults.standard.set(presentStyle.rawValue, forKey: "PresenterNotes.presentStyle")
+            UserDefaults.standard.set(presentStyle.rawValue, forKey: Self.presentStyleDefaultsKey)
             if !presentStyle.usesParagraphs { autoScroll = false }
         }
     }
@@ -126,11 +126,11 @@ final class NotesViewModel: ObservableObject {
     // MARK: - Init
 
     init() {
-        if let raw = UserDefaults.standard.string(forKey: "PresenterNotes.mode"),
+        if let raw = UserDefaults.standard.string(forKey: Self.modeDefaultsKey),
            let m = AppMode(rawValue: raw) {
             self.mode = m
         }
-        if let raw = UserDefaults.standard.string(forKey: "PresenterNotes.presentStyle"),
+        if let raw = UserDefaults.standard.string(forKey: Self.presentStyleDefaultsKey),
            let style = PresentStyle(rawValue: raw) {
             self.presentStyle = style
         }
@@ -239,8 +239,10 @@ final class NotesViewModel: ObservableObject {
 
     // MARK: - Last-opened file restoration
 
-    private static let bookmarkDefaultsKey = "PresenterNotes.lastOpenedBookmark"
-    private static let slideIndexDefaultsKey = "PresenterNotes.lastSlideIndex"
+    static let modeDefaultsKey         = "PresenterNotes.mode"
+    static let presentStyleDefaultsKey = "PresenterNotes.presentStyle"
+    static let bookmarkDefaultsKey     = "PresenterNotes.lastOpenedBookmark"
+    static let slideIndexDefaultsKey   = "PresenterNotes.lastSlideIndex"
 
     /// Try to reload the file the user was on last time the app was open.
     /// Returns `true` if a document was restored, `false` if there was no

@@ -12,7 +12,7 @@ final class NotesViewModelTests: XCTestCase {
         super.setUp()
         // NotesViewModel.init reads the last-used mode from UserDefaults,
         // so prior test runs can leak state. Clear before each test.
-        UserDefaults.standard.removeObject(forKey: "PresenterNotes.mode")
+        UserDefaults.standard.removeObject(forKey: NotesViewModel.modeDefaultsKey)
     }
 
     // MARK: - loadMarkdown / loadSample / newDocument
