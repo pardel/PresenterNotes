@@ -12,7 +12,6 @@
 		AA0000000000000000000022 /* NotesDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000012 /* NotesDocument.swift */; };
 		AA0000000000000000000023 /* NotesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000013 /* NotesViewModel.swift */; };
 		AA0000000000000000000024 /* SpeechController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000014 /* SpeechController.swift */; };
-		AA0000000000000000000025 /* KeyCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000015 /* KeyCaptureView.swift */; };
 		AA0000000000000000000026 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000018 /* Assets.xcassets */; };
 		AA0000000000000000000027 /* NotesValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000100 /* NotesValidator.swift */; };
 		AA0000000000000000000028 /* EditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000101 /* EditorView.swift */; };
@@ -40,7 +39,6 @@
 		AA0000000000000000000012 /* NotesDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesDocument.swift; sourceTree = "<group>"; };
 		AA0000000000000000000013 /* NotesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesViewModel.swift; sourceTree = "<group>"; };
 		AA0000000000000000000014 /* SpeechController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechController.swift; sourceTree = "<group>"; };
-		AA0000000000000000000015 /* KeyCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyCaptureView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000016 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AA0000000000000000000017 /* PresenterNotes.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PresenterNotes.entitlements; sourceTree = "<group>"; };
 		AA0000000000000000000018 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -102,7 +100,6 @@
 				AA0000000000000000000100 /* NotesValidator.swift */,
 				AA0000000000000000000013 /* NotesViewModel.swift */,
 				AA0000000000000000000014 /* SpeechController.swift */,
-				AA0000000000000000000015 /* KeyCaptureView.swift */,
 				AA0000000000000000000102 /* MarkdownFileDocument.swift */,
 				AA0000000000000000000018 /* Assets.xcassets */,
 				AA0000000000000000000016 /* Info.plist */,
@@ -219,7 +216,6 @@
 				AA0000000000000000000022 /* NotesDocument.swift in Sources */,
 				AA0000000000000000000023 /* NotesViewModel.swift in Sources */,
 				AA0000000000000000000024 /* SpeechController.swift in Sources */,
-				AA0000000000000000000025 /* KeyCaptureView.swift in Sources */,
 				AA0000000000000000000027 /* NotesValidator.swift in Sources */,
 				AA0000000000000000000028 /* EditorView.swift in Sources */,
 				AA0000000000000000000029 /* MarkdownFileDocument.swift in Sources */,
