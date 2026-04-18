@@ -974,6 +974,7 @@ struct SlideView: View {
 // MARK: - Previews
 
 #if DEBUG
+@MainActor
 private func contentPreviewModel() -> NotesViewModel {
     let vm = NotesViewModel()
     vm.loadSample()

@@ -6,6 +6,7 @@
 import XCTest
 @testable import PresenterNotes
 
+@MainActor
 final class NotesViewModelTests: XCTestCase {
 
     override func setUp() {

@@ -659,6 +659,7 @@ struct IssueRow: View {
 // MARK: - Previews
 
 #if DEBUG
+@MainActor
 private func previewModel(_ source: String? = nil) -> NotesViewModel {
     let vm = NotesViewModel()
     if let source = source {

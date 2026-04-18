@@ -47,9 +47,12 @@ enum PresentStyle: String, CaseIterable, Identifiable {
 }
 
 /// Owns the loaded document, current slide index, and speech state.
-/// All mutations are expected to happen on the main thread (they come
-/// from SwiftUI bindings or from `SpeechController` callbacks that are
-/// dispatched to `DispatchQueue.main`).
+/// `@MainActor`-isolated so the compiler enforces the main-thread
+/// invariant that used to be a comment. SwiftUI views already run on
+/// the main actor; `SpeechController` callbacks that reach in here are
+/// typed as `@MainActor` closures so the recogniser-queue hops happen
+/// on the speech side, not here.
+@MainActor
 final class NotesViewModel: ObservableObject {
 
     // MARK: - Published state
@@ -423,12 +426,17 @@ final class NotesViewModel: ObservableObject {
         autoScrollProgress = 0
 
         autoScrollTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            let elapsed = Date().timeIntervalSince(self.autoScrollStartTime ?? Date())
-            let fraction = min(elapsed / self.autoScrollDuration, 1.0)
-            self.autoScrollProgress = CGFloat(fraction)
-            if fraction >= 1.0 {
-                self.nextParagraph()
+            // Timer was scheduled on the main RunLoop, so it fires on
+            // main. `assumeIsolated` tells the compiler what's already
+            // true at runtime without paying for a Task hop.
+            MainActor.assumeIsolated {
+                guard let self = self else { return }
+                let elapsed = Date().timeIntervalSince(self.autoScrollStartTime ?? Date())
+                let fraction = min(elapsed / self.autoScrollDuration, 1.0)
+                self.autoScrollProgress = CGFloat(fraction)
+                if fraction >= 1.0 {
+                    self.nextParagraph()
+                }
             }
         }
     }
@@ -530,7 +538,10 @@ final class NotesViewModel: ObservableObject {
 
     // MARK: - Sample content
 
-    static let sampleMarkdown: String = """
+    /// Immutable, `Sendable` — no reason to gate it behind the main actor
+    /// just because the enclosing class happens to be `@MainActor`. Tests
+    /// and previews need to read it without ceremony.
+    nonisolated static let sampleMarkdown: String = """
     ## Welcome
 
     Thanks for joining today. I'm excited to walk you through what we've been

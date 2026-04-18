@@ -11,6 +11,7 @@
 import XCTest
 @testable import PresenterNotes
 
+@MainActor
 final class SpeechControllerTests: XCTestCase {
 
     func test_init_defaultStateIsIdle() {
