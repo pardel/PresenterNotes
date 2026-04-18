@@ -95,8 +95,9 @@ enum NotesDocument {
     /// Matches `## Title` but not `### Sub` (H3+) and not `#Title`
     /// (no space). The returned title is whitespace-trimmed and has any
     /// trailing `##` decoration stripped — so `"## Hello ##"` returns
-    /// `"Hello"` and `"## "` returns `""` (distinct from nil, so the
-    /// empty-title validation rule can still fire).
+    /// `"Hello"`. A bare `"##"` or `"## "` (which trims to `"##"`)
+    /// returns nil; the validator catches those explicitly as the
+    /// "empty slide title" error case.
     static func h2Title(in line: String) -> String? {
         let trimmed = line.trimmingCharacters(in: .whitespaces)
         guard trimmed.hasPrefix("## ") else { return nil }

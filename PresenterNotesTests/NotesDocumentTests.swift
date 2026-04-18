@@ -165,4 +165,62 @@ final class NotesDocumentTests: XCTestCase {
         XCTAssertTrue(NotesDocument.bodyMatchTokens(in: "").isEmpty)
         XCTAssertTrue(NotesDocument.bodyMatchTokens(in: "   \n  ").isEmpty)
     }
+
+    // MARK: - h2Title
+
+    func test_h2Title_returnsTitleForSimpleH2() {
+        XCTAssertEqual(NotesDocument.h2Title(in: "## Hello"), "Hello")
+    }
+
+    func test_h2Title_stripsTrailingDecoration() {
+        XCTAssertEqual(NotesDocument.h2Title(in: "## Hello ##"), "Hello")
+        XCTAssertEqual(NotesDocument.h2Title(in: "## Hello #"), "Hello")
+        XCTAssertEqual(NotesDocument.h2Title(in: "## Hello ####"), "Hello")
+    }
+
+    func test_h2Title_trimsLeadingWhitespace() {
+        XCTAssertEqual(NotesDocument.h2Title(in: "   ## Indented"), "Indented")
+        XCTAssertEqual(NotesDocument.h2Title(in: "\t## Tabbed"), "Tabbed")
+    }
+
+    func test_h2Title_rejectsH1AndDeeperHeadings() {
+        XCTAssertNil(NotesDocument.h2Title(in: "# Title"))
+        XCTAssertNil(NotesDocument.h2Title(in: "### Sub"))
+        XCTAssertNil(NotesDocument.h2Title(in: "#### Deeper"))
+        XCTAssertNil(NotesDocument.h2Title(in: "##### Deepest"))
+    }
+
+    func test_h2Title_rejectsMissingSpaceAfterHashes() {
+        XCTAssertNil(NotesDocument.h2Title(in: "##Hello"))
+        XCTAssertNil(NotesDocument.h2Title(in: "#Hello"))
+    }
+
+    func test_h2Title_rejectsBareHashes() {
+        // Both `"##"` and `"## "` trim to `"##"`, which lacks the
+        // required `"## "` (hash-hash-space) prefix. The validator
+        // catches these as the empty-title error case.
+        XCTAssertNil(NotesDocument.h2Title(in: "##"))
+        XCTAssertNil(NotesDocument.h2Title(in: "## "))
+        XCTAssertNil(NotesDocument.h2Title(in: "  ##  "))
+    }
+
+    func test_h2Title_returnsEmptyForHashOnlyDecoration() {
+        // `"## ####"` passes the prefix check (there's a real space
+        // after the two hashes), then the trailing-hash stripper eats
+        // all the # characters, leaving an empty title.
+        XCTAssertEqual(NotesDocument.h2Title(in: "## ####"), "")
+    }
+
+    func test_h2Title_preservesInnerPunctuation() {
+        XCTAssertEqual(
+            NotesDocument.h2Title(in: "## Hello, World!"),
+            "Hello, World!"
+        )
+    }
+
+    func test_h2Title_rejectsEmptyAndWhitespace() {
+        XCTAssertNil(NotesDocument.h2Title(in: ""))
+        XCTAssertNil(NotesDocument.h2Title(in: "   "))
+        XCTAssertNil(NotesDocument.h2Title(in: "\n"))
+    }
 }
