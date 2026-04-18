@@ -103,20 +103,13 @@ enum NotesDocument {
     }
 
     /// Extract the last `count` spoken words from the body, lowercased
-    /// and stripped of punctuation. Markdown formatting characters are
-    /// removed.
+    /// and stripped of punctuation. Uses `bodyMatchTokens` so the needle
+    /// produced here tokenises the same way the speech-side rolling
+    /// window does — a contraction like "don't" becomes one token
+    /// ("dont"), not two ("don", "t").
     static func trailingWords(from body: String, count: Int) -> [String] {
-        let cleaned = body
-            .replacingOccurrences(of: "`", with: " ")
-            .replacingOccurrences(of: "*", with: " ")
-            .replacingOccurrences(of: "_", with: " ")
-            .replacingOccurrences(of: ">", with: " ")
-            .replacingOccurrences(of: "- ", with: " ")
-        let words = cleaned
-            .lowercased()
-            .components(separatedBy: CharacterSet.alphanumerics.inverted)
-            .filter { !$0.isEmpty }
-        return Array(words.suffix(count))
+        let tokens = bodyMatchTokens(in: body).filter { !$0.isEmpty }
+        return Array(tokens.suffix(count))
     }
 
     /// Normalise a single spoken/written word for matching: lowercase,

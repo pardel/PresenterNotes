@@ -250,9 +250,13 @@ final class SpeechController: NSObject, ObservableObject {
     /// (new words since the previous callback). Exposed as `internal` so
     /// unit tests can drive it without the audio engine.
     func updateRolling(with transcript: String) {
-        let words = transcript
-            .lowercased()
-            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+        // Single tokeniser shared with `NotesDocument.trailingWords` and
+        // `NotesDocument.bodyMatchTokens` so the needle, the haystack, and
+        // the body-side highlight tokens all agree on word boundaries.
+        // "don't" → "dont" here; if we split on non-alphanumerics instead
+        // the body's "dont" token would never match the "don"+"t" pair
+        // emitted by the recogniser.
+        let words = NotesDocument.bodyMatchTokens(in: transcript)
             .filter { !$0.isEmpty }
 
         // Compute the delta since the last callback. If the new count is

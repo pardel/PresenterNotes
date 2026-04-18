@@ -99,7 +99,7 @@ final class SpeechControllerTests: XCTestCase {
 
     func test_updateRolling_advancesWhenTrailingWordsSpokenInSingleSession() {
         let c = SpeechController()
-        c.currentTrailingWordsProvider = { ["where", "it", "s", "headed", "next"] }
+        c.currentTrailingWordsProvider = { ["where", "its", "headed", "next"] }
         var advanceCount = 0
         c.onAdvanceDetected = { advanceCount += 1 }
 
@@ -114,12 +114,12 @@ final class SpeechControllerTests: XCTestCase {
     /// boundary so trailing-words matches spanning it still fire.
     func test_updateRolling_advancesWhenTrailingWordsStraddleSessionBoundary() {
         let c = SpeechController()
-        c.currentTrailingWordsProvider = { ["where", "it", "s", "headed", "next"] }
+        c.currentTrailingWordsProvider = { ["where", "its", "headed", "next"] }
         var advanceCount = 0
         c.onAdvanceDetected = { advanceCount += 1 }
 
         // Session 1: presenter is mid-slide, approaching the trailing words.
-        c.updateRolling(with: "thanks for joining today where it")
+        c.updateRolling(with: "thanks for joining today where it's")
         XCTAssertEqual(advanceCount, 0, "Mid-slide should not advance")
 
         // The underlying recogniser ends its session. A new one is about to
@@ -127,7 +127,7 @@ final class SpeechControllerTests: XCTestCase {
         c.handleSessionRestart()
 
         // Session 2: presenter finishes the slide.
-        c.updateRolling(with: "s headed next")
+        c.updateRolling(with: "headed next")
         XCTAssertEqual(advanceCount, 1,
                        "Trailing-words match should survive a session restart")
     }
