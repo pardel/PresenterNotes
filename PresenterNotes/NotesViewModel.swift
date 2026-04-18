@@ -165,12 +165,15 @@ final class NotesViewModel: ObservableObject {
         sourceURL = url
         errorMessage = nil
         currentIndex = 0
+        // Suppress the undo push that `sourceText.didSet` would otherwise
+        // record: loading a document is a fresh start, not an edit, and
+        // any history from the previous document will be cleared below.
+        isApplyingUndoRedo = true
         sourceText = text  // triggers reparse()
+        isApplyingUndoRedo = false
         // reparse() recomputes isDirty, but after we just set lastSavedText
         // the values are equal, so isDirty should already be false.
         isDirty = false
-        // Loading a document is a fresh start — drop any edit history
-        // carried over from the previously-open document.
         undoStack.removeAll()
         redoStack.removeAll()
         lastUndoPushTime = .distantPast
