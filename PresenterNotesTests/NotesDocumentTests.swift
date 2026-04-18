@@ -223,4 +223,115 @@ final class NotesDocumentTests: XCTestCase {
         XCTAssertNil(NotesDocument.h2Title(in: "   "))
         XCTAssertNil(NotesDocument.h2Title(in: "\n"))
     }
+
+    // MARK: - paragraphs(from:)
+
+    func test_paragraphs_emptySlides_returnsEmpty() {
+        XCTAssertTrue(NotesDocument.paragraphs(from: []).isEmpty)
+    }
+
+    func test_paragraphs_singleSlide_singleParagraph() {
+        let slides = NotesDocument.parse("## Title\n\nJust one paragraph.")
+        let paras = NotesDocument.paragraphs(from: slides)
+        XCTAssertEqual(paras.count, 1)
+        XCTAssertEqual(paras[0].text, "Just one paragraph.")
+        XCTAssertEqual(paras[0].title, "Title")
+        XCTAssertTrue(paras[0].isFirstInSlide)
+        XCTAssertTrue(paras[0].isLastInSlide)
+    }
+
+    func test_paragraphs_splitOnBlankLines() {
+        let slides = NotesDocument.parse("## T\n\nFirst paragraph.\n\nSecond paragraph.\n\nThird.")
+        let paras = NotesDocument.paragraphs(from: slides)
+        XCTAssertEqual(paras.map { $0.text },
+                       ["First paragraph.", "Second paragraph.", "Third."])
+    }
+
+    func test_paragraphs_titleAttachedToFirstParagraphOnly() {
+        let slides = NotesDocument.parse("## Welcome\n\nFirst.\n\nSecond.\n\nThird.")
+        let paras = NotesDocument.paragraphs(from: slides)
+        XCTAssertEqual(paras[0].title, "Welcome")
+        XCTAssertNil(paras[1].title)
+        XCTAssertNil(paras[2].title)
+    }
+
+    func test_paragraphs_isFirstIsLastFlags() {
+        let slides = NotesDocument.parse("## T\n\nA.\n\nB.\n\nC.")
+        let paras = NotesDocument.paragraphs(from: slides)
+        XCTAssertEqual(paras.count, 3)
+        XCTAssertEqual(paras.map { $0.isFirstInSlide }, [true, false, false])
+        XCTAssertEqual(paras.map { $0.isLastInSlide }, [false, false, true])
+    }
+
+    func test_paragraphs_sequentialIdsAcrossSlides() {
+        let source = """
+        ## One
+
+        A.
+
+        B.
+
+        ## Two
+
+        C.
+        """
+        let paras = NotesDocument.paragraphs(from: NotesDocument.parse(source))
+        XCTAssertEqual(paras.map { $0.id }, [0, 1, 2])
+        XCTAssertEqual(paras.map { $0.slideIndex }, [0, 0, 1])
+    }
+
+    func test_paragraphs_slideBoundariesHaveCorrectFlags() {
+        // Slide 1: two paragraphs (A first+!last, B !first+last)
+        // Slide 2: one paragraph (C first+last — single-paragraph slide)
+        let source = """
+        ## One
+
+        A.
+
+        B.
+
+        ## Two
+
+        C.
+        """
+        let paras = NotesDocument.paragraphs(from: NotesDocument.parse(source))
+        XCTAssertEqual(paras.map { $0.isFirstInSlide }, [true, false, true])
+        XCTAssertEqual(paras.map { $0.isLastInSlide },  [false, true, true])
+    }
+
+    func test_paragraphs_preambleSlidePreservesNilTitle() {
+        let slides = NotesDocument.parse("Intro text before any heading.\n\n## First\n\nBody.")
+        let paras = NotesDocument.paragraphs(from: slides)
+        XCTAssertEqual(paras.count, 2)
+        XCTAssertNil(paras[0].title)                  // preamble has no title
+        XCTAssertEqual(paras[0].text, "Intro text before any heading.")
+        XCTAssertEqual(paras[1].title, "First")
+    }
+
+    func test_paragraphs_emptyBodySlide_placeholderParagraph() {
+        // A slide whose body is empty gets one placeholder paragraph
+        // so navigation / rendering doesn't have to special-case zero.
+        let slide = NoteSlide(id: 0, title: "Empty", body: "", trailingWords: [])
+        let paras = NotesDocument.paragraphs(from: [slide])
+        XCTAssertEqual(paras.count, 1)
+        XCTAssertEqual(paras[0].text, "")
+        XCTAssertEqual(paras[0].title, "Empty")
+        XCTAssertTrue(paras[0].isFirstInSlide)
+        XCTAssertTrue(paras[0].isLastInSlide)
+    }
+
+    func test_paragraphs_consecutiveBlankLinesDoNotYieldEmptyParagraphs() {
+        // Extra blank lines between paragraphs split into more "" chunks
+        // that must be filtered, not rendered as empty paragraphs.
+        let slides = NotesDocument.parse("## T\n\nA.\n\n\n\n\n\nB.")
+        let paras = NotesDocument.paragraphs(from: slides)
+        XCTAssertEqual(paras.map { $0.text }, ["A.", "B."])
+    }
+
+    func test_paragraphs_trimsParagraphWhitespace() {
+        let slides = NotesDocument.parse("## T\n\n   A with leading space.   \n\n\tB with tab.")
+        let paras = NotesDocument.paragraphs(from: slides)
+        XCTAssertEqual(paras.map { $0.text },
+                       ["A with leading space.", "B with tab."])
+    }
 }
