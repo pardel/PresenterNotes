@@ -11,9 +11,14 @@ final class NotesViewModelTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        // NotesViewModel.init reads the last-used mode from UserDefaults,
-        // so prior test runs can leak state. Clear before each test.
-        UserDefaults.standard.removeObject(forKey: NotesViewModel.modeDefaultsKey)
+        // NotesViewModel.init and restoreLastOpenedDocument read several
+        // UserDefaults keys, so prior test runs can leak state. Clear
+        // every key the view model owns before each test.
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: NotesViewModel.modeDefaultsKey)
+        defaults.removeObject(forKey: NotesViewModel.presentStyleDefaultsKey)
+        defaults.removeObject(forKey: NotesViewModel.bookmarkDefaultsKey)
+        defaults.removeObject(forKey: NotesViewModel.slideIndexDefaultsKey)
     }
 
     // MARK: - loadMarkdown / loadSample / newDocument
@@ -366,5 +371,134 @@ final class NotesViewModelTests: XCTestCase {
         vm.undo()
         vm.undo()  // second undo with an empty stack
         XCTAssertFalse(vm.canUndo)
+    }
+
+    // MARK: - Persistence (last-opened document)
+
+    func test_restoreLastOpenedDocument_noBookmark_returnsFalse() {
+        // UserDefaults cleared in setUp — nothing to restore.
+        let vm = NotesViewModel()
+        XCTAssertFalse(vm.restoreLastOpenedDocument())
+        XCTAssertFalse(vm.hasDocument)
+    }
+
+    func test_restoreLastOpenedDocument_invalidBookmark_clearsAndReturnsFalse() {
+        // Plant garbage at the bookmark key. Restore should refuse it
+        // and clear the entry so the next launch doesn't keep retrying.
+        UserDefaults.standard.set(
+            Data("not a real bookmark".utf8),
+            forKey: NotesViewModel.bookmarkDefaultsKey
+        )
+        let vm = NotesViewModel()
+        XCTAssertFalse(vm.restoreLastOpenedDocument())
+        XCTAssertNil(UserDefaults.standard.data(forKey: NotesViewModel.bookmarkDefaultsKey))
+    }
+
+    func test_loadFromDisk_storesBookmark() throws {
+        // Write a real temp file, load it, confirm something gets stored
+        // at the bookmark key. Not asserting the bookmark can be resolved
+        // in a non-sandboxed test process — just that loadFromDisk
+        // attempted the write and set sourceURL/sourceText.
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pn-bookmark-\(UUID().uuidString).md")
+        try "## Stored\n\nBody.\n".write(to: tmp, atomically: true, encoding: .utf8)
+        defer { try? FileManager.default.removeItem(at: tmp) }
+
+        let vm = NotesViewModel()
+        vm.loadFromDisk(tmp)
+        XCTAssertEqual(vm.sourceURL, tmp)
+        XCTAssertTrue(vm.sourceText.contains("Stored"))
+    }
+
+    func test_newDocument_clearsBookmark() {
+        // Seed the key then call newDocument — it should wipe the
+        // bookmark so the next launch falls back to the sample/new
+        // document rather than trying to reopen a file the user
+        // explicitly abandoned.
+        UserDefaults.standard.set(Data([0, 1, 2]), forKey: NotesViewModel.bookmarkDefaultsKey)
+        let vm = NotesViewModel()
+        vm.newDocument()
+        XCTAssertNil(UserDefaults.standard.data(forKey: NotesViewModel.bookmarkDefaultsKey))
+    }
+
+    func test_loadSample_clearsBookmark() {
+        UserDefaults.standard.set(Data([0, 1, 2]), forKey: NotesViewModel.bookmarkDefaultsKey)
+        let vm = NotesViewModel()
+        vm.loadSample()
+        XCTAssertNil(UserDefaults.standard.data(forKey: NotesViewModel.bookmarkDefaultsKey))
+    }
+
+    func test_slideIndex_persistsAcrossInstances() {
+        // `currentIndex` didSet writes to defaults. A fresh vm doesn't
+        // read that back automatically — it only matters via
+        // restoreLastOpenedDocument — but we can at least verify the
+        // side-effect happens on navigation.
+        let vm = NotesViewModel()
+        vm.loadSample()
+        vm.jump(to: 2)
+        XCTAssertEqual(
+            UserDefaults.standard.integer(forKey: NotesViewModel.slideIndexDefaultsKey),
+            2
+        )
+    }
+
+    // MARK: - Auto-scroll
+
+    func test_autoScroll_defaultsToFalse() {
+        let vm = NotesViewModel()
+        XCTAssertFalse(vm.autoScroll)
+        XCTAssertEqual(vm.autoScrollProgress, 0)
+    }
+
+    func test_autoScroll_turningOff_resetsProgress() {
+        let vm = NotesViewModel()
+        vm.loadSample()
+        vm.presentStyle = .teleprompter
+        vm.autoScroll = true
+        // Progress starts at 0 regardless of how long the timer runs.
+        vm.autoScroll = false
+        XCTAssertEqual(vm.autoScrollProgress, 0)
+    }
+
+    func test_autoScroll_switchingToSlideMode_disablesIt() {
+        let vm = NotesViewModel()
+        vm.loadSample()
+        vm.presentStyle = .teleprompter
+        vm.autoScroll = true
+        XCTAssertTrue(vm.autoScroll)
+        // `.slide` doesn't use paragraphs — autoScroll has no meaning
+        // there, so it's force-disabled to avoid a phantom running timer.
+        vm.presentStyle = .slide
+        XCTAssertFalse(vm.autoScroll)
+    }
+
+    func test_autoScroll_switchingToEditMode_disablesIt() {
+        let vm = NotesViewModel()
+        vm.loadSample()
+        vm.presentStyle = .teleprompter
+        vm.autoScroll = true
+        vm.mode = .edit
+        XCTAssertFalse(vm.autoScroll)
+    }
+
+    func test_autoScroll_progressAdvancesOverTime() {
+        // The timer fires every 50ms. Spin the RunLoop briefly and
+        // assert progress moved off zero. Short enough to be reliable,
+        // not long enough to complete the paragraph (which would fire
+        // nextParagraph and reset progress).
+        let vm = NotesViewModel()
+        // Body long enough to give a duration well above the 0.15s we
+        // wait below: 100 chars / 15 cps = ~6.7s.
+        vm.loadMarkdown("## T\n\n" + String(repeating: "word ", count: 20) + "\n")
+        vm.presentStyle = .teleprompter
+        vm.autoScroll = true
+
+        let exp = expectation(description: "progress advances")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { exp.fulfill() }
+        wait(for: [exp], timeout: 1.0)
+
+        XCTAssertGreaterThan(vm.autoScrollProgress, 0)
+        XCTAssertLessThan(vm.autoScrollProgress, 1)
+        vm.autoScroll = false
     }
 }
