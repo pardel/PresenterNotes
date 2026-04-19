@@ -45,9 +45,6 @@
 		AA0000000000000000000017 /* PresenterNotes.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PresenterNotes.entitlements; sourceTree = "<group>"; };
 		AA0000000000000000000018 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA0000000000000000000019 /* PresenterNotes.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PresenterNotes.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		AA0000000000000000000100 /* NotesValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesValidator.swift; sourceTree = "<group>"; };
-		AA0000000000000000000101 /* EditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorView.swift; sourceTree = "<group>"; };
-		AA0000000000000000000102 /* MarkdownFileDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownFileDocument.swift; sourceTree = "<group>"; };
 		AA0000000000000000000060 /* NotesDocumentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesDocumentTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000061 /* NotesValidatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesValidatorTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000062 /* NotesViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesViewModelTests.swift; sourceTree = "<group>"; };
@@ -56,6 +53,9 @@
 		AA0000000000000000000065 /* EditorPaneMathTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorPaneMathTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000066 /* FontSizeMathTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FontSizeMathTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000080 /* PresenterNotesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PresenterNotesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA0000000000000000000100 /* NotesValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesValidator.swift; sourceTree = "<group>"; };
+		AA0000000000000000000101 /* EditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorView.swift; sourceTree = "<group>"; };
+		AA0000000000000000000102 /* MarkdownFileDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownFileDocument.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -76,7 +76,7 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		AA0000000000000000000004 /* Main */ = {
+		AA0000000000000000000004 = {
 			isa = PBXGroup;
 			children = (
 				AA0000000000000000000006 /* PresenterNotes */,
@@ -376,6 +376,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 65R2YTU8A5;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PresenterNotes/Info.plist;
@@ -385,7 +386,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.PresenterNotes;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.pardel.PresenterNotes;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -400,6 +401,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 65R2YTU8A5;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PresenterNotes/Info.plist;
@@ -409,7 +411,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.PresenterNotes;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.pardel.PresenterNotes;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
