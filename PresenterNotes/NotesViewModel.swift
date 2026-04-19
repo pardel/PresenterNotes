@@ -438,7 +438,12 @@ final class NotesViewModel: ObservableObject {
             // a future refactor that changed scheduling. 20 Hz Task
             // allocations are cheap.
             Task { @MainActor in
-                guard let self = self else { return }
+                // The Task is async, so ticks already in flight can
+                // run after the timer is invalidated (e.g. the user
+                // toggled autoScroll off). Bail out rather than
+                // updating progress or firing `nextParagraph()` on a
+                // disabled auto-scroll.
+                guard let self = self, self.autoScroll else { return }
                 let elapsed = Date().timeIntervalSince(self.autoScrollStartTime ?? Date())
                 let fraction = min(elapsed / self.autoScrollDuration, 1.0)
                 self.autoScrollProgress = CGFloat(fraction)
