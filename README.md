@@ -5,14 +5,6 @@
 [![CI](https://github.com/pardel/PresenterNotes/actions/workflows/ci.yml/badge.svg)](https://github.com/pardel/PresenterNotes/actions/workflows/ci.yml)
 [![Licence: MIT](https://img.shields.io/badge/Licence-MIT-blue.svg)](LICENSE)
 
-<!-- HERO_VIDEO -->
-<p align="center">
-  <a href="https://www.youtube.com/watch?v=YOUTUBE_ID_TBD">
-    <img src="docs/assets/hero.gif" alt="PresenterNotes — speech-driven auto-advance" width="720">
-  </a>
-</p>
-<!-- /HERO_VIDEO -->
-
 - **Markdown-first.** Your script is a `.md` file. No proprietary format, no lock-in, your editor of choice.
 - **Voice-driven.** When you speak the closing words of a chunk, the app advances. Paraphrase freely — the matcher is forgiving.
 - **On-device.** Speech recognition never leaves your Mac.
@@ -49,7 +41,7 @@ A three-pane editor (outline · source · preview). The slides format has five r
 
 ### Teleprompter / focused slide mode
 
-![](docs/assets/focused.gif)
+![](docs/assets/focused.png)
 
 Full-screen single-slide display, font sized to the window.
 
