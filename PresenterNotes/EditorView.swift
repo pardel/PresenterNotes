@@ -393,12 +393,12 @@ struct EditorPane: View {
         return nil
     }
 
-    /// Byte offset (UTF-16) of the start of slide `slideId` within
-    /// `text`. Returned as a UTF-16 code-unit count because the caller
-    /// feeds it into `NSRange(location:)` on `NSTextView`, which uses
-    /// UTF-16 indexing. Counting Swift Characters (grapheme clusters)
-    /// would drift from the NSRange world for any content with emoji,
-    /// CJK, or composed characters.
+    /// UTF-16 code-unit offset (equivalently, `NSString` index) of the
+    /// start of slide `slideId` within `text`. Returned in that
+    /// coordinate system because the caller feeds it into
+    /// `NSRange(location:)` on `NSTextView`. Counting Swift Characters
+    /// (grapheme clusters) would drift from the NSRange world for any
+    /// content with emoji, CJK, or composed characters.
     static func characterOffset(forSlide slideId: Int, in text: String) -> Int {
         let lines = text.components(separatedBy: "\n")
         var charPos = 0
