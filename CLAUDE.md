@@ -19,7 +19,6 @@ Open `PresenterNotes.xcodeproj` in Xcode to run the app or the SwiftUI previews.
 - `SpeechController.swift` — wraps `SFSpeechRecognizer` + `AVAudioEngine`. Keeps a rolling window of recognised words, calls `onWordsRecognised` with the delta of new words, and fires `onAdvanceDetected` when the trailing words of the current slide appear in order.
 - `ContentView.swift` — the window shell, `PresentView` (full-screen single-slide display), and `EditorView` wiring.
 - `EditorView.swift` — the markdown editing mode with validation.
-- `KeyCaptureView.swift` — NSViewRepresentable for key event capture.
 
 ### Data flow
 

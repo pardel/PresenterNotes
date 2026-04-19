@@ -36,19 +36,20 @@ final class SpeechController: NSObject, ObservableObject {
     /// UserDefaults under `looseMatchingDefaultsKey`.
     @Published var looseMatching: Bool = false
 
-    /// Called on the main queue when we decide the current slide is finished.
-    var onAdvanceDetected: (() -> Void)?
+    /// Called when we decide the current slide is finished. Typed
+    /// `@MainActor` so the compiler enforces the main-thread contract
+    /// with `NotesViewModel` (which is itself `@MainActor`).
+    var onAdvanceDetected: (@MainActor () -> Void)?
 
-    /// Provider for the trailing words of the *current* slide. Called on
-    /// the main queue; reads from the view model.
-    var currentTrailingWordsProvider: (() -> [String])?
+    /// Provider for the trailing words of the *current* slide. Reads
+    /// from the view model, so typed `@MainActor`.
+    var currentTrailingWordsProvider: (@MainActor () -> [String])?
 
-    /// Called on the main queue with every batch of *newly* recognised
-    /// words (the delta since the previous callback). Used by the view
-    /// model to advance its "how far through the slide has the presenter
-    /// read" pointer so the current slide can highlight recognised words
-    /// in real time.
-    var onWordsRecognised: (([String]) -> Void)?
+    /// Called with every batch of *newly* recognised words (the delta
+    /// since the previous callback). Used by the view model to advance
+    /// its "how far through the slide has the presenter read" pointer
+    /// so the current slide can highlight recognised words in real time.
+    var onWordsRecognised: (@MainActor ([String]) -> Void)?
 
     // MARK: - Private state
 
@@ -222,7 +223,15 @@ final class SpeechController: NSObject, ObservableObject {
             }
             guard let result = result else { return }
             let transcript = result.bestTranscription.formattedString
-            DispatchQueue.main.async {
+            // Hop onto the main actor via Task rather than
+            // `DispatchQueue.main.async` + `assumeIsolated`. The
+            // assertion-based form is correct today (main runloop ≡
+            // main actor executor) but would crash instead of
+            // compile-fail if that ever changes; the Task form is a
+            // compile-time guarantee. The recogniser ticks a few
+            // times a second, so the allocation overhead doesn't
+            // matter here.
+            Task { @MainActor in
                 self.lastTranscript = transcript
                 self.updateRolling(with: transcript)
             }
@@ -249,10 +258,20 @@ final class SpeechController: NSObject, ObservableObject {
     /// the rolling window *and* fires `onWordsRecognised` with the delta
     /// (new words since the previous callback). Exposed as `internal` so
     /// unit tests can drive it without the audio engine.
+    ///
+    /// Main-actor-isolated so the `@MainActor` callbacks can be invoked
+    /// directly. Tests run in `@MainActor` classes so they call this
+    /// without ceremony; the recognizer-queue caller hops to main via
+    /// `Task { @MainActor in … }`.
+    @MainActor
     func updateRolling(with transcript: String) {
-        let words = transcript
-            .lowercased()
-            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+        // Single tokeniser shared with `NotesDocument.trailingWords` and
+        // `NotesDocument.bodyMatchTokens` so the needle, the haystack, and
+        // the body-side highlight tokens all agree on word boundaries.
+        // "don't" → "dont" here; if we split on non-alphanumerics instead
+        // the body's "dont" token would never match the "don"+"t" pair
+        // emitted by the recogniser.
+        let words = NotesDocument.bodyMatchTokens(in: transcript)
             .filter { !$0.isEmpty }
 
         // Compute the delta since the last callback. If the new count is
@@ -279,6 +298,7 @@ final class SpeechController: NSObject, ObservableObject {
         checkForAdvance()
     }
 
+    @MainActor
     private func checkForAdvance() {
         guard let needle = currentTrailingWordsProvider?(), !needle.isEmpty else { return }
 

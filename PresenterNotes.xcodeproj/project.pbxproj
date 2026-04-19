@@ -12,7 +12,6 @@
 		AA0000000000000000000022 /* NotesDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000012 /* NotesDocument.swift */; };
 		AA0000000000000000000023 /* NotesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000013 /* NotesViewModel.swift */; };
 		AA0000000000000000000024 /* SpeechController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000014 /* SpeechController.swift */; };
-		AA0000000000000000000025 /* KeyCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000015 /* KeyCaptureView.swift */; };
 		AA0000000000000000000026 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000018 /* Assets.xcassets */; };
 		AA0000000000000000000027 /* NotesValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000100 /* NotesValidator.swift */; };
 		AA0000000000000000000028 /* EditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000101 /* EditorView.swift */; };
@@ -22,6 +21,8 @@
 		AA0000000000000000000072 /* NotesViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000062 /* NotesViewModelTests.swift */; };
 		AA0000000000000000000073 /* SpeechControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000063 /* SpeechControllerTests.swift */; };
 		AA0000000000000000000074 /* AppModeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000064 /* AppModeTests.swift */; };
+		AA0000000000000000000075 /* EditorPaneMathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000065 /* EditorPaneMathTests.swift */; };
+		AA0000000000000000000076 /* FontSizeMathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000066 /* FontSizeMathTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -40,7 +41,6 @@
 		AA0000000000000000000012 /* NotesDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesDocument.swift; sourceTree = "<group>"; };
 		AA0000000000000000000013 /* NotesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesViewModel.swift; sourceTree = "<group>"; };
 		AA0000000000000000000014 /* SpeechController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechController.swift; sourceTree = "<group>"; };
-		AA0000000000000000000015 /* KeyCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyCaptureView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000016 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AA0000000000000000000017 /* PresenterNotes.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PresenterNotes.entitlements; sourceTree = "<group>"; };
 		AA0000000000000000000018 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -53,6 +53,8 @@
 		AA0000000000000000000062 /* NotesViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesViewModelTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000063 /* SpeechControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechControllerTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000064 /* AppModeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModeTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000065 /* EditorPaneMathTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorPaneMathTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000066 /* FontSizeMathTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FontSizeMathTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000080 /* PresenterNotesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PresenterNotesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -102,7 +104,6 @@
 				AA0000000000000000000100 /* NotesValidator.swift */,
 				AA0000000000000000000013 /* NotesViewModel.swift */,
 				AA0000000000000000000014 /* SpeechController.swift */,
-				AA0000000000000000000015 /* KeyCaptureView.swift */,
 				AA0000000000000000000102 /* MarkdownFileDocument.swift */,
 				AA0000000000000000000018 /* Assets.xcassets */,
 				AA0000000000000000000016 /* Info.plist */,
@@ -119,6 +120,8 @@
 				AA0000000000000000000062 /* NotesViewModelTests.swift */,
 				AA0000000000000000000063 /* SpeechControllerTests.swift */,
 				AA0000000000000000000064 /* AppModeTests.swift */,
+				AA0000000000000000000065 /* EditorPaneMathTests.swift */,
+				AA0000000000000000000066 /* FontSizeMathTests.swift */,
 			);
 			path = PresenterNotesTests;
 			sourceTree = "<group>";
@@ -219,7 +222,6 @@
 				AA0000000000000000000022 /* NotesDocument.swift in Sources */,
 				AA0000000000000000000023 /* NotesViewModel.swift in Sources */,
 				AA0000000000000000000024 /* SpeechController.swift in Sources */,
-				AA0000000000000000000025 /* KeyCaptureView.swift in Sources */,
 				AA0000000000000000000027 /* NotesValidator.swift in Sources */,
 				AA0000000000000000000028 /* EditorView.swift in Sources */,
 				AA0000000000000000000029 /* MarkdownFileDocument.swift in Sources */,
@@ -235,6 +237,8 @@
 				AA0000000000000000000072 /* NotesViewModelTests.swift in Sources */,
 				AA0000000000000000000073 /* SpeechControllerTests.swift in Sources */,
 				AA0000000000000000000074 /* AppModeTests.swift in Sources */,
+				AA0000000000000000000075 /* EditorPaneMathTests.swift in Sources */,
+				AA0000000000000000000076 /* FontSizeMathTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

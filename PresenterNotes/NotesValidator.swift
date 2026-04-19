@@ -106,8 +106,11 @@ enum NotesValidator {
                 }
             }
 
-            // H2 with empty title.
-            if trimmed == "##" || trimmed == "## " {
+            // H2 with empty title — bare `##` (no space to satisfy the
+            // `## ` prefix that h2Title requires). `trimmed` is already
+            // whitespace-trimmed, so a source line of `"## "` also ends
+            // up here.
+            if trimmed == "##" {
                 issues.append(ValidationIssue(
                     severity: .error,
                     message: "Empty slide title on line \(idx + 1).",
@@ -116,18 +119,21 @@ enum NotesValidator {
                 ))
                 continue
             }
-            // `## ` followed by only whitespace after stripping trailing hashes.
-            if trimmed.hasPrefix("## ") {
-                var title = String(trimmed.dropFirst(3))
-                while title.hasSuffix("#") { title = String(title.dropLast()) }
-                if title.trimmingCharacters(in: .whitespaces).isEmpty {
-                    issues.append(ValidationIssue(
-                        severity: .error,
-                        message: "Empty slide title on line \(idx + 1).",
-                        lineRange: (idx + 1)...(idx + 1),
-                        fix: replacingLine(idx, with: "## Untitled")
-                    ))
-                }
+            // `## ` with a real space but whose content is only
+            // whitespace plus a (space-preceded) closing-hash
+            // decoration, e.g. `##    ##` → h2Title strips the ` ##`
+            // suffix and then trims the remaining spaces, returning
+            // the empty string. `## ####` is *not* in this set:
+            // without a space between the `## ` prefix and the trailing
+            // hashes, h2Title treats the `####` as literal title
+            // content and returns `"####"`.
+            if let title = NotesDocument.h2Title(in: rawLine), title.isEmpty {
+                issues.append(ValidationIssue(
+                    severity: .error,
+                    message: "Empty slide title on line \(idx + 1).",
+                    lineRange: (idx + 1)...(idx + 1),
+                    fix: replacingLine(idx, with: "## Untitled")
+                ))
             }
         }
 
@@ -142,14 +148,11 @@ enum NotesValidator {
         var metas: [SlideMeta] = []
         var currentMeta: SlideMeta? = nil
         for (idx, rawLine) in lines.enumerated() {
-            let trimmed = rawLine.trimmingCharacters(in: .whitespaces)
-            if trimmed.hasPrefix("## ") && !trimmed.hasPrefix("### ") {
+            if let title = NotesDocument.h2Title(in: rawLine) {
                 if let m = currentMeta { metas.append(m) }
-                var title = String(trimmed.dropFirst(3))
-                while title.hasSuffix("#") { title = String(title.dropLast()) }
                 currentMeta = SlideMeta(
                     titleLine: idx,
-                    title: title.trimmingCharacters(in: .whitespaces),
+                    title: title,
                     bodyLines: []
                 )
             } else {

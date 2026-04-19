@@ -47,16 +47,19 @@ enum PresentStyle: String, CaseIterable, Identifiable {
 }
 
 /// Owns the loaded document, current slide index, and speech state.
-/// All mutations are expected to happen on the main thread (they come
-/// from SwiftUI bindings or from `SpeechController` callbacks that are
-/// dispatched to `DispatchQueue.main`).
+/// `@MainActor`-isolated so the compiler enforces the main-thread
+/// invariant that used to be a comment. SwiftUI views already run on
+/// the main actor; `SpeechController` callbacks that reach in here are
+/// typed as `@MainActor` closures so the recogniser-queue hops happen
+/// on the speech side, not here.
+@MainActor
 final class NotesViewModel: ObservableObject {
 
     // MARK: - Published state
 
     @Published var mode: AppMode = .present {
         didSet {
-            UserDefaults.standard.set(mode.rawValue, forKey: "PresenterNotes.mode")
+            UserDefaults.standard.set(mode.rawValue, forKey: Self.modeDefaultsKey)
             if mode == .present, isDirty, sourceURL != nil {
                 try? save()
             }
@@ -66,7 +69,7 @@ final class NotesViewModel: ObservableObject {
 
     @Published var presentStyle: PresentStyle = .slide {
         didSet {
-            UserDefaults.standard.set(presentStyle.rawValue, forKey: "PresenterNotes.presentStyle")
+            UserDefaults.standard.set(presentStyle.rawValue, forKey: Self.presentStyleDefaultsKey)
             if !presentStyle.usesParagraphs { autoScroll = false }
         }
     }
@@ -126,11 +129,11 @@ final class NotesViewModel: ObservableObject {
     // MARK: - Init
 
     init() {
-        if let raw = UserDefaults.standard.string(forKey: "PresenterNotes.mode"),
+        if let raw = UserDefaults.standard.string(forKey: Self.modeDefaultsKey),
            let m = AppMode(rawValue: raw) {
             self.mode = m
         }
-        if let raw = UserDefaults.standard.string(forKey: "PresenterNotes.presentStyle"),
+        if let raw = UserDefaults.standard.string(forKey: Self.presentStyleDefaultsKey),
            let style = PresentStyle(rawValue: raw) {
             self.presentStyle = style
         }
@@ -165,12 +168,21 @@ final class NotesViewModel: ObservableObject {
         sourceURL = url
         errorMessage = nil
         currentIndex = 0
+        // Reset paragraph index too: reparse()'s clamp only fires if the
+        // old index is past the new doc's paragraph count, so if the new
+        // doc is long enough the stale index would silently point at an
+        // unrelated paragraph of the new content (and resetSpokenProgress
+        // would build the match cache from it).
+        currentParagraphIndex = 0
+        // Suppress the undo push that `sourceText.didSet` would otherwise
+        // record: loading a document is a fresh start, not an edit, and
+        // any history from the previous document will be cleared below.
+        isApplyingUndoRedo = true
         sourceText = text  // triggers reparse()
+        isApplyingUndoRedo = false
         // reparse() recomputes isDirty, but after we just set lastSavedText
         // the values are equal, so isDirty should already be false.
         isDirty = false
-        // Loading a document is a fresh start — drop any edit history
-        // carried over from the previously-open document.
         undoStack.removeAll()
         redoStack.removeAll()
         lastUndoPushTime = .distantPast
@@ -239,8 +251,10 @@ final class NotesViewModel: ObservableObject {
 
     // MARK: - Last-opened file restoration
 
-    private static let bookmarkDefaultsKey = "PresenterNotes.lastOpenedBookmark"
-    private static let slideIndexDefaultsKey = "PresenterNotes.lastSlideIndex"
+    static let modeDefaultsKey         = "PresenterNotes.mode"
+    static let presentStyleDefaultsKey = "PresenterNotes.presentStyle"
+    static let bookmarkDefaultsKey     = "PresenterNotes.lastOpenedBookmark"
+    static let slideIndexDefaultsKey   = "PresenterNotes.lastSlideIndex"
 
     /// Try to reload the file the user was on last time the app was open.
     /// Returns `true` if a document was restored, `false` if there was no
@@ -418,12 +432,29 @@ final class NotesViewModel: ObservableObject {
         autoScrollProgress = 0
 
         autoScrollTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
+            // Unwrap to a strong `let` *before* spawning the Task —
+            // Swift 5.10+ rejects capturing the weak `self` (a var)
+            // inside a concurrent closure. This way the Task captures
+            // a stable strong reference whose scope is just this tick.
             guard let self = self else { return }
-            let elapsed = Date().timeIntervalSince(self.autoScrollStartTime ?? Date())
-            let fraction = min(elapsed / self.autoScrollDuration, 1.0)
-            self.autoScrollProgress = CGFloat(fraction)
-            if fraction >= 1.0 {
-                self.nextParagraph()
+            // The timer fires on the main RunLoop today, but hopping
+            // via `Task { @MainActor in … }` makes that a compile-time
+            // guarantee rather than a precondition that would crash on
+            // a future refactor that changed scheduling. 20 Hz Task
+            // allocations are cheap.
+            Task { @MainActor in
+                // The Task is async, so ticks already in flight can
+                // run after the timer is invalidated (e.g. the user
+                // toggled autoScroll off). Bail out rather than
+                // updating progress or firing `nextParagraph()` on a
+                // disabled auto-scroll.
+                guard self.autoScroll else { return }
+                let elapsed = Date().timeIntervalSince(self.autoScrollStartTime ?? Date())
+                let fraction = min(elapsed / self.autoScrollDuration, 1.0)
+                self.autoScrollProgress = CGFloat(fraction)
+                if fraction >= 1.0 {
+                    self.nextParagraph()
+                }
             }
         }
     }
@@ -525,7 +556,10 @@ final class NotesViewModel: ObservableObject {
 
     // MARK: - Sample content
 
-    static let sampleMarkdown: String = """
+    /// Immutable, `Sendable` — no reason to gate it behind the main actor
+    /// just because the enclosing class happens to be `@MainActor`. Tests
+    /// and previews need to read it without ceremony.
+    nonisolated static let sampleMarkdown: String = """
     ## Welcome
 
     Thanks for joining today. I'm excited to walk you through what we've been

@@ -74,7 +74,7 @@ enum NotesDocument {
         }
 
         for line in lines {
-            if let heading = Self.parseH2(line) {
+            if let heading = Self.h2Title(in: line) {
                 flush()
                 currentTitle = heading
                 currentBody = []
@@ -87,36 +87,44 @@ enum NotesDocument {
         return slides
     }
 
-    /// Return the heading text if `line` is an H2 heading, otherwise nil.
-    /// Matches `## Title` but not `### Sub` and not `#Title`.
-    private static func parseH2(_ line: String) -> String? {
+    /// Single source of truth for "is this line an H2 heading, and if so
+    /// what's the cleaned title?". Used by the parser, the validator,
+    /// and the editor's slide-index math. Callers that only need a bool
+    /// check write `h2Title(in: line) != nil`.
+    ///
+    /// Matches `## Title` but not `### Sub` (H3+) and not `#Title`
+    /// (no space). The returned title is whitespace-trimmed and has any
+    /// trailing `##` decoration stripped — so `"## Hello ##"` returns
+    /// `"Hello"`. A bare `"##"` or `"## "` (which trims to `"##"`)
+    /// returns nil; the validator catches those explicitly as the
+    /// "empty slide title" error case.
+    static func h2Title(in line: String) -> String? {
         let trimmed = line.trimmingCharacters(in: .whitespaces)
         guard trimmed.hasPrefix("## ") else { return nil }
-        // Exclude H3+ (which also "hasPrefix" "## " if we're not careful;
-        // we aren't, because "### " starts with "##" not "## ").
-        // Strip the "## " and any trailing "##" decorations.
         var title = String(trimmed.dropFirst(3))
-        while title.hasSuffix("#") {
-            title = String(title.dropLast())
+        // CommonMark-style optional closing `#` sequence: a run of
+        // trailing `#` characters counts as decoration only if it's
+        // preceded by whitespace. "## Hello ##" → "Hello"; "## C#"
+        // keeps its `#` because the `#` is part of the title, not a
+        // closing sequence.
+        let hashRun = title.reversed().prefix { $0 == "#" }
+        if !hashRun.isEmpty {
+            let withoutHashes = title.dropLast(hashRun.count)
+            if withoutHashes.last?.isWhitespace == true {
+                title = String(withoutHashes)
+            }
         }
         return title.trimmingCharacters(in: .whitespaces)
     }
 
     /// Extract the last `count` spoken words from the body, lowercased
-    /// and stripped of punctuation. Markdown formatting characters are
-    /// removed.
+    /// and stripped of punctuation. Uses `bodyMatchTokens` so the needle
+    /// produced here tokenises the same way the speech-side rolling
+    /// window does — a contraction like "don't" becomes one token
+    /// ("dont"), not two ("don", "t").
     static func trailingWords(from body: String, count: Int) -> [String] {
-        let cleaned = body
-            .replacingOccurrences(of: "`", with: " ")
-            .replacingOccurrences(of: "*", with: " ")
-            .replacingOccurrences(of: "_", with: " ")
-            .replacingOccurrences(of: ">", with: " ")
-            .replacingOccurrences(of: "- ", with: " ")
-        let words = cleaned
-            .lowercased()
-            .components(separatedBy: CharacterSet.alphanumerics.inverted)
-            .filter { !$0.isEmpty }
-        return Array(words.suffix(count))
+        let tokens = bodyMatchTokens(in: body).filter { !$0.isEmpty }
+        return Array(tokens.suffix(count))
     }
 
     /// Normalise a single spoken/written word for matching: lowercase,

@@ -6,13 +6,19 @@
 import XCTest
 @testable import PresenterNotes
 
+@MainActor
 final class NotesViewModelTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        // NotesViewModel.init reads the last-used mode from UserDefaults,
-        // so prior test runs can leak state. Clear before each test.
-        UserDefaults.standard.removeObject(forKey: "PresenterNotes.mode")
+        // NotesViewModel.init and restoreLastOpenedDocument read several
+        // UserDefaults keys, so prior test runs can leak state. Clear
+        // every key the view model owns before each test.
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: NotesViewModel.modeDefaultsKey)
+        defaults.removeObject(forKey: NotesViewModel.presentStyleDefaultsKey)
+        defaults.removeObject(forKey: NotesViewModel.bookmarkDefaultsKey)
+        defaults.removeObject(forKey: NotesViewModel.slideIndexDefaultsKey)
     }
 
     // MARK: - loadMarkdown / loadSample / newDocument
@@ -267,5 +273,253 @@ final class NotesViewModelTests: XCTestCase {
         XCTAssertEqual(vm.spokenWordCount, 2)
         vm.sourceText = "## Title\n\nalpha beta gamma delta\n"
         XCTAssertEqual(vm.spokenWordCount, 0)
+    }
+
+    // MARK: - Undo / redo
+
+    func test_undo_freshViewModel_cannotUndoOrRedo() {
+        let vm = NotesViewModel()
+        XCTAssertFalse(vm.canUndo)
+        XCTAssertFalse(vm.canRedo)
+    }
+
+    func test_undo_afterEdit_restoresPreviousSource() {
+        let vm = NotesViewModel()
+        vm.loadMarkdown("## Start\n\nInitial.\n")
+        let initial = vm.sourceText
+        vm.sourceText = "## Edited\n\nChanged.\n"
+        XCTAssertTrue(vm.canUndo)
+        vm.undo()
+        XCTAssertEqual(vm.sourceText, initial)
+        XCTAssertTrue(vm.canRedo)
+    }
+
+    func test_redo_afterUndo_replaysEdit() {
+        let vm = NotesViewModel()
+        vm.loadMarkdown("## A\n\nOne.\n")
+        vm.sourceText = "## B\n\nTwo.\n"
+        let edited = vm.sourceText
+        vm.undo()
+        vm.redo()
+        XCTAssertEqual(vm.sourceText, edited)
+        XCTAssertFalse(vm.canRedo)
+    }
+
+    func test_newEditAfterUndo_clearsRedoStack() {
+        let vm = NotesViewModel()
+        vm.loadMarkdown("## A\n\nOne.\n")
+        vm.sourceText = "## B\n\nTwo.\n"
+        vm.undo()
+        XCTAssertTrue(vm.canRedo)
+        // A fresh edit should discard the redo path; you can't redo
+        // back into a branch you've just diverged from.
+        vm.sourceText = "## C\n\nThree.\n"
+        XCTAssertFalse(vm.canRedo)
+    }
+
+    func test_rapidEdits_coalesceIntoSingleUndoStep() {
+        // Tests running synchronously hit the coalesce window (0.6s)
+        // easily, so a burst of edits only pushes the first pre-edit
+        // state. One undo therefore rolls back the entire burst.
+        let vm = NotesViewModel()
+        vm.loadMarkdown("## T\n\nBody.\n")
+        let initial = vm.sourceText
+        vm.sourceText = initial + "a"
+        vm.sourceText = initial + "ab"
+        vm.sourceText = initial + "abc"
+        vm.undo()
+        XCTAssertEqual(vm.sourceText, initial)
+    }
+
+    func test_undo_onEmptyStack_isNoOp() {
+        let vm = NotesViewModel()
+        vm.loadMarkdown("## T\n\nBody.\n")
+        let initial = vm.sourceText
+        XCTAssertFalse(vm.canUndo)
+        vm.undo()  // should not throw or mutate
+        XCTAssertEqual(vm.sourceText, initial)
+    }
+
+    func test_redo_onEmptyStack_isNoOp() {
+        let vm = NotesViewModel()
+        vm.loadMarkdown("## T\n\nBody.\n")
+        let initial = vm.sourceText
+        XCTAssertFalse(vm.canRedo)
+        vm.redo()
+        XCTAssertEqual(vm.sourceText, initial)
+    }
+
+    func test_loadMarkdown_clearsUndoHistory() {
+        let vm = NotesViewModel()
+        vm.loadMarkdown("## A\n\nOne.\n")
+        vm.sourceText = "## A\n\nEdited.\n"
+        XCTAssertTrue(vm.canUndo)
+        // Loading a new document is a fresh start — no history from
+        // the previous document should survive.
+        vm.loadMarkdown("## B\n\nOther.\n")
+        XCTAssertFalse(vm.canUndo)
+        XCTAssertFalse(vm.canRedo)
+    }
+
+    func test_undoRedo_doesNotRecurseIntoItself() {
+        // Ensures the `isApplyingUndoRedo` guard works: an undo should
+        // not itself push another undo entry, otherwise undo/redo
+        // would ping-pong forever instead of converging.
+        let vm = NotesViewModel()
+        vm.loadMarkdown("## A\n\nOne.\n")
+        vm.sourceText = "## B\n\nTwo.\n"
+        vm.undo()
+        vm.undo()  // second undo with an empty stack
+        XCTAssertFalse(vm.canUndo)
+    }
+
+    // MARK: - Persistence (last-opened document)
+
+    func test_restoreLastOpenedDocument_noBookmark_returnsFalse() {
+        // UserDefaults cleared in setUp — nothing to restore.
+        let vm = NotesViewModel()
+        XCTAssertFalse(vm.restoreLastOpenedDocument())
+        XCTAssertFalse(vm.hasDocument)
+    }
+
+    func test_restoreLastOpenedDocument_invalidBookmark_clearsAndReturnsFalse() {
+        // Plant garbage at the bookmark key. Restore should refuse it
+        // and clear the entry so the next launch doesn't keep retrying.
+        UserDefaults.standard.set(
+            Data("not a real bookmark".utf8),
+            forKey: NotesViewModel.bookmarkDefaultsKey
+        )
+        let vm = NotesViewModel()
+        XCTAssertFalse(vm.restoreLastOpenedDocument())
+        XCTAssertNil(UserDefaults.standard.data(forKey: NotesViewModel.bookmarkDefaultsKey))
+    }
+
+    func test_loadFromDisk_storesBookmark() throws {
+        // Write a real temp file, load it, confirm something gets stored
+        // at the bookmark key. Not asserting the bookmark can be resolved
+        // in a non-sandboxed test process — just that loadFromDisk
+        // attempted the write and set sourceURL/sourceText.
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pn-bookmark-\(UUID().uuidString).md")
+        try "## Stored\n\nBody.\n".write(to: tmp, atomically: true, encoding: .utf8)
+        defer { try? FileManager.default.removeItem(at: tmp) }
+
+        let vm = NotesViewModel()
+        vm.loadFromDisk(tmp)
+        XCTAssertEqual(vm.sourceURL, tmp)
+        XCTAssertTrue(vm.sourceText.contains("Stored"))
+    }
+
+    func test_newDocument_clearsBookmark() {
+        // Seed the key then call newDocument — it should wipe the
+        // bookmark so the next launch falls back to the sample/new
+        // document rather than trying to reopen a file the user
+        // explicitly abandoned.
+        UserDefaults.standard.set(Data([0, 1, 2]), forKey: NotesViewModel.bookmarkDefaultsKey)
+        let vm = NotesViewModel()
+        vm.newDocument()
+        XCTAssertNil(UserDefaults.standard.data(forKey: NotesViewModel.bookmarkDefaultsKey))
+    }
+
+    func test_loadSample_clearsBookmark() {
+        UserDefaults.standard.set(Data([0, 1, 2]), forKey: NotesViewModel.bookmarkDefaultsKey)
+        let vm = NotesViewModel()
+        vm.loadSample()
+        XCTAssertNil(UserDefaults.standard.data(forKey: NotesViewModel.bookmarkDefaultsKey))
+    }
+
+    func test_loadMarkdown_resetsParagraphIndex_evenWhenOldIndexInRange() {
+        // Regression: if the user had navigated deep into a paragraph-
+        // based view and then loaded a new doc that happened to have
+        // enough paragraphs, reparse()'s clamp was a no-op and the
+        // stale paragraph index pointed at an unrelated paragraph of
+        // the new content. Speech matching would then build its cache
+        // against the wrong paragraph.
+        let vm = NotesViewModel()
+        vm.loadMarkdown("## A\n\nA1.\n\nA2.\n\nA3.\n\nA4.\n\nA5.\n")
+        vm.jumpToParagraph(4)
+        XCTAssertEqual(vm.currentParagraphIndex, 4)
+        // Second doc is also large enough that index 4 would remain in
+        // range — clamp alone wouldn't reset it.
+        vm.loadMarkdown("## B\n\nB1.\n\nB2.\n\nB3.\n\nB4.\n\nB5.\n")
+        XCTAssertEqual(vm.currentIndex, 0)
+        XCTAssertEqual(vm.currentParagraphIndex, 0)
+    }
+
+    func test_slideIndex_persistsAcrossInstances() {
+        // `currentIndex` didSet writes to defaults. A fresh vm doesn't
+        // read that back automatically — it only matters via
+        // restoreLastOpenedDocument — but we can at least verify the
+        // side-effect happens on navigation.
+        let vm = NotesViewModel()
+        vm.loadSample()
+        vm.jump(to: 2)
+        XCTAssertEqual(
+            UserDefaults.standard.integer(forKey: NotesViewModel.slideIndexDefaultsKey),
+            2
+        )
+    }
+
+    // MARK: - Auto-scroll
+
+    func test_autoScroll_defaultsToFalse() {
+        let vm = NotesViewModel()
+        XCTAssertFalse(vm.autoScroll)
+        XCTAssertEqual(vm.autoScrollProgress, 0)
+    }
+
+    func test_autoScroll_turningOff_resetsProgress() {
+        let vm = NotesViewModel()
+        vm.loadSample()
+        vm.presentStyle = .teleprompter
+        vm.autoScroll = true
+        // Progress starts at 0 regardless of how long the timer runs.
+        vm.autoScroll = false
+        XCTAssertEqual(vm.autoScrollProgress, 0)
+    }
+
+    func test_autoScroll_switchingToSlideMode_disablesIt() {
+        let vm = NotesViewModel()
+        vm.loadSample()
+        vm.presentStyle = .teleprompter
+        vm.autoScroll = true
+        XCTAssertTrue(vm.autoScroll)
+        // `.slide` doesn't use paragraphs — autoScroll has no meaning
+        // there, so it's force-disabled to avoid a phantom running timer.
+        vm.presentStyle = .slide
+        XCTAssertFalse(vm.autoScroll)
+    }
+
+    func test_autoScroll_switchingToEditMode_disablesIt() {
+        let vm = NotesViewModel()
+        vm.loadSample()
+        vm.presentStyle = .teleprompter
+        vm.autoScroll = true
+        vm.mode = .edit
+        XCTAssertFalse(vm.autoScroll)
+    }
+
+    func test_autoScroll_progressAdvancesOverTime() async {
+        // Body long enough that completing the paragraph (which fires
+        // nextParagraph and resets progress) is nowhere near this
+        // test's deadline: 100 chars / 15 cps ≈ 6.7s duration.
+        let vm = NotesViewModel()
+        vm.loadMarkdown("## T\n\n" + String(repeating: "word ", count: 20) + "\n")
+        vm.presentStyle = .teleprompter
+        vm.autoScroll = true
+
+        // Poll for progress > 0 rather than waiting a fixed interval.
+        // The timer tick goes through `Task { @MainActor in … }`, so
+        // how long the first update takes depends on main-actor
+        // scheduling. A fixed 150ms window was reliable on fast
+        // hardware but flaked on slower CI runners.
+        let deadline = Date().addingTimeInterval(2.0)
+        while vm.autoScrollProgress == 0 && Date() < deadline {
+            try? await Task.sleep(nanoseconds: 10_000_000) // 10ms
+        }
+
+        XCTAssertGreaterThan(vm.autoScrollProgress, 0, "timer never ticked within 2s")
+        XCTAssertLessThan(vm.autoScrollProgress, 1)
+        vm.autoScroll = false
     }
 }

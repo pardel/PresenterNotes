@@ -11,10 +11,9 @@ PresenterNotes is a single-window macOS SwiftUI app with two modes — **Present
 - **`PresenterNotesApp.swift`** — `@main`, the window scene, the Commands menu wiring keyboard shortcuts to view-model actions.
 - **`NotesViewModel.swift`** — single source of truth. Owns `sourceText`, parses it into `slides`, tracks `currentIndex` and `spokenWordCount`, exposes `next` / `previous` / `jump`. All UI mutation flows through this object on the main thread.
 - **`NotesDocument.swift`** — pure parser. `parse(_:)` turns markdown into `[NoteSlide]`. `bodyMatchTokens(in:)` and `normaliseMatchWord(_:)` define the canonical tokenisation used by the speech matcher.
-- **`NotesValidator.swift`** — slides-format rule engine. Produces `[Issue]` with optional auto-fix closures.
+- **`NotesValidator.swift`** — slides-format rule engine. Produces `[ValidationIssue]` with optional auto-fix closures.
 - **`SpeechController.swift`** — `SFSpeechRecognizer` + `AVAudioEngine` wrapper. Maintains a rolling window of recognised words. Two callbacks: `onWordsRecognised` (delta) and `onAdvanceDetected` (when the trailing signature appears in the tail of the rolling window).
-- **`ContentView.swift` / `EditorView.swift`** — the two view trees.
-- **`KeyCaptureView.swift`** — `NSViewRepresentable` for low-level key event capture. Currently unused by the default UI; kept for extension.
+- **`ContentView.swift` / `EditorView.swift`** — the two view trees. Key-event capture lives inside `ContentView` via `NSEvent.addLocalMonitorForEvents` — it fires before the responder chain so presentation-remote keys are caught regardless of current focus.
 
 ## Data flow
 
