@@ -5,8 +5,14 @@
 //  Pure-function tests for `EditorPane.characterOffset(forSlide:in:)`
 //  and `EditorPane.slideIndex(forCursorAt:in:)`. These drive the
 //  outline ↔ editor scroll sync and the cursor-follows-slide
-//  behaviour, so they need to agree with `NotesDocument.parse` about
-//  where slide boundaries live.
+//  behaviour.
+//
+//  Offsets are UTF-16 code-unit counts because production consumes
+//  them as `NSRange.location` on `NSTextView`. Tests therefore index
+//  with `NSString.substring(from:)` / `nsText.range(of:).location`
+//  rather than `String.index(_:offsetBy:)` (which counts grapheme
+//  clusters and would quietly lie about offsets that contain emoji,
+//  CJK, or composed characters).
 //
 
 import XCTest
@@ -24,8 +30,7 @@ final class EditorPaneMathTests: XCTestCase {
     func test_characterOffset_secondSlide_pointsAtItsHeading() {
         let text = "## One\n\nBody.\n## Two\n\nBody.\n"
         let offset = EditorPane.characterOffset(forSlide: 1, in: text)
-        let start = text.index(text.startIndex, offsetBy: offset)
-        XCTAssertTrue(text[start...].hasPrefix("## Two"))
+        XCTAssertTrue((text as NSString).substring(from: offset).hasPrefix("## Two"))
     }
 
     func test_characterOffset_preamble_isSlideZero() {
@@ -35,8 +40,7 @@ final class EditorPaneMathTests: XCTestCase {
         XCTAssertEqual(EditorPane.characterOffset(forSlide: 0, in: text), 0)
 
         let offset1 = EditorPane.characterOffset(forSlide: 1, in: text)
-        let start = text.index(text.startIndex, offsetBy: offset1)
-        XCTAssertTrue(text[start...].hasPrefix("## First"))
+        XCTAssertTrue((text as NSString).substring(from: offset1).hasPrefix("## First"))
     }
 
     func test_characterOffset_outOfRangeSlide_clampsToEnd() {
@@ -46,7 +50,7 @@ final class EditorPaneMathTests: XCTestCase {
         let text = "## Only\n\nBody.\n"
         let offset = EditorPane.characterOffset(forSlide: 99, in: text)
         XCTAssertGreaterThanOrEqual(offset, 0)
-        XCTAssertLessThanOrEqual(offset, text.count)
+        XCTAssertLessThanOrEqual(offset, (text as NSString).length)
     }
 
     func test_characterOffset_emptyText_returnsZeroOrClamped() {
@@ -58,8 +62,26 @@ final class EditorPaneMathTests: XCTestCase {
         // so the offset math should pick it up as a slide boundary.
         let text = "## One\n\nBody.\n  ## Two\n\nBody.\n"
         let offset1 = EditorPane.characterOffset(forSlide: 1, in: text)
-        let start = text.index(text.startIndex, offsetBy: offset1)
-        XCTAssertTrue(text[start...].hasPrefix("  ## Two"))
+        XCTAssertTrue((text as NSString).substring(from: offset1).hasPrefix("  ## Two"))
+    }
+
+    func test_characterOffset_multibyteContent_returnsUTF16Offset() {
+        // Regression: the walker used `line.count` (grapheme clusters),
+        // so any line with emoji or surrogate-pair characters produced
+        // an offset that NSTextView then consumed as a UTF-16 position
+        // — landing mid-character of the next line. "👋" is a single
+        // Swift Character but two UTF-16 code units.
+        let text = "## Hello 👋\n\nBody.\n## Two\n\nBody.\n"
+        let offset = EditorPane.characterOffset(forSlide: 1, in: text)
+        let ns = text as NSString
+        XCTAssertTrue(ns.substring(from: offset).hasPrefix("## Two"))
+        // The character-count offset would have been off by 1 (the
+        // emoji), pointing one UTF-16 unit earlier.
+        let characterCountOffset = offset - 1
+        XCTAssertFalse(
+            ns.substring(from: characterCountOffset).hasPrefix("## Two"),
+            "test would pass under the old grapheme-cluster counting, invalidating the regression"
+        )
     }
 
     // MARK: - slideIndex
@@ -71,20 +93,13 @@ final class EditorPaneMathTests: XCTestCase {
 
     func test_slideIndex_insideFirstSlide_returnsZero() {
         let text = "## One\n\nBody.\n## Two\n\nBody.\n"
-        // Cursor somewhere inside the first body line.
-        let cursor = text.distance(
-            from: text.startIndex,
-            to: text.range(of: "Body.")!.lowerBound
-        )
+        let cursor = (text as NSString).range(of: "Body.").location
         XCTAssertEqual(EditorPane.slideIndex(forCursorAt: cursor, in: text), 0)
     }
 
     func test_slideIndex_insideSecondSlide_returnsOne() {
         let text = "## One\n\nBody.\n## Two\n\nTwoBody.\n"
-        let cursor = text.distance(
-            from: text.startIndex,
-            to: text.range(of: "TwoBody.")!.lowerBound
-        )
+        let cursor = (text as NSString).range(of: "TwoBody.").location
         XCTAssertEqual(EditorPane.slideIndex(forCursorAt: cursor, in: text), 1)
     }
 
@@ -98,23 +113,27 @@ final class EditorPaneMathTests: XCTestCase {
         let text = "Intro text before heading.\n\n## First\n\nBody.\n"
         XCTAssertEqual(EditorPane.slideIndex(forCursorAt: 0, in: text), 0)
 
+        let ns = text as NSString
         // Cursor still in preamble → slide 0.
-        let cursor = text.distance(
-            from: text.startIndex,
-            to: text.range(of: "Intro")!.lowerBound
-        )
+        let cursor = ns.range(of: "Intro").location
         XCTAssertEqual(EditorPane.slideIndex(forCursorAt: cursor, in: text), 0)
 
         // Cursor in first titled slide → slide 1.
-        let cursor2 = text.distance(
-            from: text.startIndex,
-            to: text.range(of: "Body.")!.lowerBound
-        )
+        let cursor2 = ns.range(of: "Body.").location
         XCTAssertEqual(EditorPane.slideIndex(forCursorAt: cursor2, in: text), 1)
     }
 
     func test_slideIndex_emptyText_returnsZero() {
         XCTAssertEqual(EditorPane.slideIndex(forCursorAt: 0, in: ""), 0)
+    }
+
+    func test_slideIndex_multibyteContent_walksUTF16() {
+        // Symmetric to the characterOffset multibyte regression: with
+        // an emoji in slide 0, a UTF-16 cursor landing inside slide 1
+        // must still return 1.
+        let text = "## Hello 👋\n\nBody.\n## Two\n\nTwoBody.\n"
+        let cursor = (text as NSString).range(of: "TwoBody.").location
+        XCTAssertEqual(EditorPane.slideIndex(forCursorAt: cursor, in: text), 1)
     }
 
     // MARK: - Round-trip

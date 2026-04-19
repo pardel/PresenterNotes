@@ -393,6 +393,12 @@ struct EditorPane: View {
         return nil
     }
 
+    /// Byte offset (UTF-16) of the start of slide `slideId` within
+    /// `text`. Returned as a UTF-16 code-unit count because the caller
+    /// feeds it into `NSRange(location:)` on `NSTextView`, which uses
+    /// UTF-16 indexing. Counting Swift Characters (grapheme clusters)
+    /// would drift from the NSRange world for any content with emoji,
+    /// CJK, or composed characters.
     static func characterOffset(forSlide slideId: Int, in text: String) -> Int {
         let lines = text.components(separatedBy: "\n")
         var charPos = 0
@@ -406,11 +412,14 @@ struct EditorPane: View {
                 currentSlide = 0
             }
             if currentSlide == slideId { return charPos }
-            charPos += line.count + 1
+            charPos += line.utf16.count + 1  // +1 for the `\n` separator
         }
         return max(charPos - 1, 0)
     }
 
+    /// Which slide contains the cursor at `offset`. `offset` is expected
+    /// to be a UTF-16 code-unit offset (the form `NSTextView` reports
+    /// via `selectedRange().location` and `characterIndexForInsertion`).
     static func slideIndex(forCursorAt offset: Int, in text: String) -> Int {
         let lines = text.components(separatedBy: "\n")
         var charPos = 0
@@ -422,7 +431,7 @@ struct EditorPane: View {
             } else if slideIdx < 0 && !trimmed.isEmpty {
                 slideIdx = 0
             }
-            charPos += line.count + 1
+            charPos += line.utf16.count + 1
             if charPos > offset { break }
         }
         return max(slideIdx, 0)
