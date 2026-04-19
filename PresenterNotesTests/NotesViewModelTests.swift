@@ -428,6 +428,24 @@ final class NotesViewModelTests: XCTestCase {
         XCTAssertNil(UserDefaults.standard.data(forKey: NotesViewModel.bookmarkDefaultsKey))
     }
 
+    func test_loadMarkdown_resetsParagraphIndex_evenWhenOldIndexInRange() {
+        // Regression: if the user had navigated deep into a paragraph-
+        // based view and then loaded a new doc that happened to have
+        // enough paragraphs, reparse()'s clamp was a no-op and the
+        // stale paragraph index pointed at an unrelated paragraph of
+        // the new content. Speech matching would then build its cache
+        // against the wrong paragraph.
+        let vm = NotesViewModel()
+        vm.loadMarkdown("## A\n\nA1.\n\nA2.\n\nA3.\n\nA4.\n\nA5.\n")
+        vm.jumpToParagraph(4)
+        XCTAssertEqual(vm.currentParagraphIndex, 4)
+        // Second doc is also large enough that index 4 would remain in
+        // range — clamp alone wouldn't reset it.
+        vm.loadMarkdown("## B\n\nB1.\n\nB2.\n\nB3.\n\nB4.\n\nB5.\n")
+        XCTAssertEqual(vm.currentIndex, 0)
+        XCTAssertEqual(vm.currentParagraphIndex, 0)
+    }
+
     func test_slideIndex_persistsAcrossInstances() {
         // `currentIndex` didSet writes to defaults. A fresh vm doesn't
         // read that back automatically — it only matters via

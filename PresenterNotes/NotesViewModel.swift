@@ -168,6 +168,12 @@ final class NotesViewModel: ObservableObject {
         sourceURL = url
         errorMessage = nil
         currentIndex = 0
+        // Reset paragraph index too: reparse()'s clamp only fires if the
+        // old index is past the new doc's paragraph count, so if the new
+        // doc is long enough the stale index would silently point at an
+        // unrelated paragraph of the new content (and resetSpokenProgress
+        // would build the match cache from it).
+        currentParagraphIndex = 0
         // Suppress the undo push that `sourceText.didSet` would otherwise
         // record: loading a document is a fresh start, not an edit, and
         // any history from the previous document will be cleared below.
