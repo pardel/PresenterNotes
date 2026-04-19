@@ -432,10 +432,12 @@ final class NotesViewModel: ObservableObject {
         autoScrollProgress = 0
 
         autoScrollTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
-            // Timer was scheduled on the main RunLoop, so it fires on
-            // main. `assumeIsolated` tells the compiler what's already
-            // true at runtime without paying for a Task hop.
-            MainActor.assumeIsolated {
+            // The timer fires on the main RunLoop today, but hopping
+            // via `Task { @MainActor in … }` makes that a compile-time
+            // guarantee rather than a precondition that would crash on
+            // a future refactor that changed scheduling. 20 Hz Task
+            // allocations are cheap.
+            Task { @MainActor in
                 guard let self = self else { return }
                 let elapsed = Date().timeIntervalSince(self.autoScrollStartTime ?? Date())
                 let fraction = min(elapsed / self.autoScrollDuration, 1.0)
