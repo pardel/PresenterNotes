@@ -45,6 +45,10 @@ A three-pane editor (outline · source · preview). The slides format has five r
 
 Full-screen single-slide display, font sized to the window.
 
+### Printable handouts
+
+Hit ⌘P to print your notes as a portrait handout, or ⇧⌘P for landscape. Each chunk gets its title and body laid out on the page — useful for a paper backup, a PDF to hand round beforehand, or a teleprompter of last resort when the projector goes down.
+
 ## The slides format
 
 Split your script into chunks with `## H2` headings. Five rules, enforced live in edit mode:
@@ -78,6 +82,8 @@ Long version: deep-dive on [pardel.dev](https://www.pardel.dev) — published wi
 | ⌘O | Open markdown… |
 | ⌘S | Save |
 | ⇧⌘S | Save as… |
+| ⌘P | Print (portrait) |
+| ⇧⌘P | Print (landscape) |
 | ⌘1 | Present mode |
 | ⌘2 | Edit mode |
 | → / Page Down / Space | Next chunk |
