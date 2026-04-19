@@ -1,6 +1,9 @@
 # macOS
 .DS_Store
 
+# Release artifacts (DMGs + exported .app live here, published via GitHub Releases)
+releases/
+
 # Xcode
 build/
 DerivedData/

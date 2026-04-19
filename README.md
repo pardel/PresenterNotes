@@ -27,9 +27,7 @@ brew install --cask pardel/tap/presenternotes
 
 ### Direct download
 
-Grab the latest `PresenterNotes.dmg` from [Releases](https://github.com/pardel/PresenterNotes/releases).
-
-> **First-launch note.** PresenterNotes is not currently notarized, so macOS Gatekeeper will block it on first launch. Right-click the app in `/Applications`, choose **Open**, and confirm. Subsequent launches work normally.
+Grab the latest `PresenterNotes-<version>.dmg` from [Releases](https://github.com/pardel/PresenterNotes/releases). Open the DMG and drag the app to `/Applications`. The build is signed and notarized, so it launches without Gatekeeper prompts.
 
 ### Build from source
 
