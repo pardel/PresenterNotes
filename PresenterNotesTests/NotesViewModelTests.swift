@@ -499,23 +499,26 @@ final class NotesViewModelTests: XCTestCase {
         XCTAssertFalse(vm.autoScroll)
     }
 
-    func test_autoScroll_progressAdvancesOverTime() {
-        // The timer fires every 50ms. Spin the RunLoop briefly and
-        // assert progress moved off zero. Short enough to be reliable,
-        // not long enough to complete the paragraph (which would fire
-        // nextParagraph and reset progress).
+    func test_autoScroll_progressAdvancesOverTime() async {
+        // Body long enough that completing the paragraph (which fires
+        // nextParagraph and resets progress) is nowhere near this
+        // test's deadline: 100 chars / 15 cps ≈ 6.7s duration.
         let vm = NotesViewModel()
-        // Body long enough to give a duration well above the 0.15s we
-        // wait below: 100 chars / 15 cps = ~6.7s.
         vm.loadMarkdown("## T\n\n" + String(repeating: "word ", count: 20) + "\n")
         vm.presentStyle = .teleprompter
         vm.autoScroll = true
 
-        let exp = expectation(description: "progress advances")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { exp.fulfill() }
-        wait(for: [exp], timeout: 1.0)
+        // Poll for progress > 0 rather than waiting a fixed interval.
+        // The timer tick goes through `Task { @MainActor in … }`, so
+        // how long the first update takes depends on main-actor
+        // scheduling. A fixed 150ms window was reliable on fast
+        // hardware but flaked on slower CI runners.
+        let deadline = Date().addingTimeInterval(2.0)
+        while vm.autoScrollProgress == 0 && Date() < deadline {
+            try? await Task.sleep(nanoseconds: 10_000_000) // 10ms
+        }
 
-        XCTAssertGreaterThan(vm.autoScrollProgress, 0)
+        XCTAssertGreaterThan(vm.autoScrollProgress, 0, "timer never ticked within 2s")
         XCTAssertLessThan(vm.autoScrollProgress, 1)
         vm.autoScroll = false
     }
