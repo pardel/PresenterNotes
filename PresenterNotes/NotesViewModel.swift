@@ -432,6 +432,11 @@ final class NotesViewModel: ObservableObject {
         autoScrollProgress = 0
 
         autoScrollTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
+            // Unwrap to a strong `let` *before* spawning the Task —
+            // Swift 5.10+ rejects capturing the weak `self` (a var)
+            // inside a concurrent closure. This way the Task captures
+            // a stable strong reference whose scope is just this tick.
+            guard let self = self else { return }
             // The timer fires on the main RunLoop today, but hopping
             // via `Task { @MainActor in … }` makes that a compile-time
             // guarantee rather than a precondition that would crash on
@@ -443,7 +448,7 @@ final class NotesViewModel: ObservableObject {
                 // toggled autoScroll off). Bail out rather than
                 // updating progress or firing `nextParagraph()` on a
                 // disabled auto-scroll.
-                guard let self = self, self.autoScroll else { return }
+                guard self.autoScroll else { return }
                 let elapsed = Date().timeIntervalSince(self.autoScrollStartTime ?? Date())
                 let fraction = min(elapsed / self.autoScrollDuration, 1.0)
                 self.autoScrollProgress = CGFloat(fraction)
