@@ -106,8 +106,11 @@ enum NotesValidator {
                 }
             }
 
-            // H2 with empty title.
-            if trimmed == "##" || trimmed == "## " {
+            // H2 with empty title — bare `##` (no space to satisfy the
+            // `## ` prefix that h2Title requires). `trimmed` is already
+            // whitespace-trimmed, so a source line of `"## "` also ends
+            // up here.
+            if trimmed == "##" {
                 issues.append(ValidationIssue(
                     severity: .error,
                     message: "Empty slide title on line \(idx + 1).",
@@ -116,7 +119,9 @@ enum NotesValidator {
                 ))
                 continue
             }
-            // `## ` followed by only whitespace after stripping trailing hashes.
+            // `## ` with a real space but the content is whitespace
+            // and/or a closing-hash decoration, e.g. `## ##` → h2Title
+            // returns the empty string.
             if let title = NotesDocument.h2Title(in: rawLine), title.isEmpty {
                 issues.append(ValidationIssue(
                     severity: .error,
