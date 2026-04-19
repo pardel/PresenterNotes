@@ -262,7 +262,7 @@ final class SpeechController: NSObject, ObservableObject {
     /// Main-actor-isolated so the `@MainActor` callbacks can be invoked
     /// directly. Tests run in `@MainActor` classes so they call this
     /// without ceremony; the recognizer-queue caller hops to main via
-    /// `DispatchQueue.main.async` + `MainActor.assumeIsolated`.
+    /// `Task { @MainActor in … }`.
     @MainActor
     func updateRolling(with transcript: String) {
         // Single tokeniser shared with `NotesDocument.trailingWords` and
