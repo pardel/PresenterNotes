@@ -119,9 +119,14 @@ enum NotesValidator {
                 ))
                 continue
             }
-            // `## ` with a real space but the content is whitespace
-            // and/or a closing-hash decoration, e.g. `## ##` → h2Title
-            // returns the empty string.
+            // `## ` with a real space but whose content is only
+            // whitespace plus a (space-preceded) closing-hash
+            // decoration, e.g. `##    ##` → h2Title strips the ` ##`
+            // suffix and then trims the remaining spaces, returning
+            // the empty string. `## ####` is *not* in this set:
+            // without a space between the `## ` prefix and the trailing
+            // hashes, h2Title treats the `####` as literal title
+            // content and returns `"####"`.
             if let title = NotesDocument.h2Title(in: rawLine), title.isEmpty {
                 issues.append(ValidationIssue(
                     severity: .error,
