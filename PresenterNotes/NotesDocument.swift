@@ -102,7 +102,18 @@ enum NotesDocument {
         let trimmed = line.trimmingCharacters(in: .whitespaces)
         guard trimmed.hasPrefix("## ") else { return nil }
         var title = String(trimmed.dropFirst(3))
-        while title.hasSuffix("#") { title = String(title.dropLast()) }
+        // CommonMark-style optional closing `#` sequence: a run of
+        // trailing `#` characters counts as decoration only if it's
+        // preceded by whitespace. "## Hello ##" → "Hello"; "## C#"
+        // keeps its `#` because the `#` is part of the title, not a
+        // closing sequence.
+        let hashRun = title.reversed().prefix { $0 == "#" }
+        if !hashRun.isEmpty {
+            let withoutHashes = title.dropLast(hashRun.count)
+            if withoutHashes.last?.isWhitespace == true {
+                title = String(withoutHashes)
+            }
+        }
         return title.trimmingCharacters(in: .whitespaces)
     }
 

@@ -204,11 +204,24 @@ final class NotesDocumentTests: XCTestCase {
         XCTAssertNil(NotesDocument.h2Title(in: "  ##  "))
     }
 
-    func test_h2Title_returnsEmptyForHashOnlyDecoration() {
-        // `"## ####"` passes the prefix check (there's a real space
-        // after the two hashes), then the trailing-hash stripper eats
-        // all the # characters, leaving an empty title.
-        XCTAssertEqual(NotesDocument.h2Title(in: "## ####"), "")
+    func test_h2Title_preservesTrailingHashAttachedToTitle() {
+        // Regression: greedy trailing-`#` stripping used to turn
+        // legitimate titles like "C#" / "F#" / "Hello#" into "C" / "F"
+        // / "Hello". Per CommonMark, the optional closing `#` sequence
+        // must be preceded by whitespace; otherwise the `#` is part of
+        // the title.
+        XCTAssertEqual(NotesDocument.h2Title(in: "## C#"), "C#")
+        XCTAssertEqual(NotesDocument.h2Title(in: "## F#"), "F#")
+        XCTAssertEqual(NotesDocument.h2Title(in: "## Hello#"), "Hello#")
+        XCTAssertEqual(NotesDocument.h2Title(in: "## A## Hashtag"), "A## Hashtag")
+    }
+
+    func test_h2Title_handlesHashOnlyContentAsLiteralTitle() {
+        // "## ####" — the four `#`s sit immediately after the leading
+        // `## ` with no space before them, so they're title content,
+        // not a closing sequence. Matches CommonMark; the old behaviour
+        // (strip everything, return "") over-matched.
+        XCTAssertEqual(NotesDocument.h2Title(in: "## ####"), "####")
     }
 
     func test_h2Title_preservesInnerPunctuation() {
