@@ -223,14 +223,17 @@ final class SpeechController: NSObject, ObservableObject {
             }
             guard let result = result else { return }
             let transcript = result.bestTranscription.formattedString
-            DispatchQueue.main.async {
+            // Hop onto the main actor via Task rather than
+            // `DispatchQueue.main.async` + `assumeIsolated`. The
+            // assertion-based form is correct today (main runloop ≡
+            // main actor executor) but would crash instead of
+            // compile-fail if that ever changes; the Task form is a
+            // compile-time guarantee. The recogniser ticks a few
+            // times a second, so the allocation overhead doesn't
+            // matter here.
+            Task { @MainActor in
                 self.lastTranscript = transcript
-                // Inside DispatchQueue.main.async we're on main at
-                // runtime; tell the compiler so it'll let us call the
-                // `@MainActor`-isolated matcher without a Task hop.
-                MainActor.assumeIsolated {
-                    self.updateRolling(with: transcript)
-                }
+                self.updateRolling(with: transcript)
             }
             if result.isFinal {
                 // Natural end of a recognition session (SFSpeechRecognizer
