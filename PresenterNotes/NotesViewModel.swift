@@ -148,6 +148,12 @@ final class NotesViewModel: ObservableObject {
     /// current slide changes (navigation or edit).
     private var currentMatchTokensCache: [String] = []
 
+    // MARK: - File watching
+
+    /// True when the file on disk has been modified since it was loaded.
+    @Published private(set) var fileModifiedOnDisk: Bool = false
+    private var fileWatchSource: DispatchSourceFileSystemObject?
+
     // MARK: - Derived
 
     var currentSlide: NoteSlide? {
@@ -186,6 +192,8 @@ final class NotesViewModel: ObservableObject {
         undoStack.removeAll()
         redoStack.removeAll()
         lastUndoPushTime = .distantPast
+        fileModifiedOnDisk = false
+        startWatchingFile()
     }
 
     // MARK: - Undo / redo
@@ -504,6 +512,50 @@ final class NotesViewModel: ObservableObject {
                 spokenWordCount = i + 1
                 break
             }
+        }
+    }
+
+    // MARK: - File watching helpers
+
+    private func startWatchingFile() {
+        fileWatchSource?.cancel()
+        fileWatchSource = nil
+        guard let url = sourceURL else { return }
+
+        // O_EVTONLY: open for vnode event monitoring without requiring read/write access.
+        let accessing = url.startAccessingSecurityScopedResource()
+        let fd = open(url.path(percentEncoded: false), O_EVTONLY)
+        if accessing { url.stopAccessingSecurityScopedResource() }
+        guard fd >= 0 else { return }
+
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: fd,
+            eventMask: [.write, .extend, .attrib, .rename, .delete],
+            queue: .main
+        )
+        source.setEventHandler { [weak self] in
+            Task { @MainActor [weak self] in self?.fileModifiedOnDisk = true }
+        }
+        source.setCancelHandler { close(fd) }
+        source.resume()
+        fileWatchSource = source
+    }
+
+    /// Reload the current file from disk, preserving the current slide position.
+    func reloadFromDisk() {
+        guard let url = sourceURL else { return }
+        let savedIndex = currentIndex
+        let accessing = url.startAccessingSecurityScopedResource()
+        defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+        do {
+            let text = try String(contentsOf: url, encoding: .utf8)
+            loadMarkdown(text, from: url)
+            if slides.indices.contains(savedIndex) {
+                currentIndex = savedIndex
+                syncParagraphIndexFromSlide()
+            }
+        } catch {
+            errorMessage = "Couldn't reload file: \(error.localizedDescription)"
         }
     }
 

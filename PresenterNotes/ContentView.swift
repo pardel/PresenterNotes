@@ -298,6 +298,18 @@ struct ModeBar: View {
                     speech.looseMatching = newValue
                 }
 
+                if viewModel.fileModifiedOnDisk {
+                    Divider().frame(height: 18)
+                    Button {
+                        viewModel.reloadFromDisk()
+                    } label: {
+                        Label("Reload", systemImage: "exclamationmark.arrow.circlepath")
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.orange)
+                    .help("File changed on disk — click to reload")
+                }
+
                 Spacer()
             }
 
